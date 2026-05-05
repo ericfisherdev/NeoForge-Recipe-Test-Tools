@@ -1,0 +1,230 @@
+plugins {
+    id 'java-library'
+    id 'eclipse'
+    id 'idea'
+    id 'jacoco'
+    id 'checkstyle'
+    id 'maven-publish'
+    id 'net.neoforged.gradle.userdev' version '7.0.170'
+    id 'com.diffplug.spotless'                 version "${spotless_version}"
+    id 'net.ltgt.errorprone'                   version "${errorprone_plugin_version}"
+    id 'com.github.ben-manes.versions'         version "${versions_plugin_version}"
+}
+
+tasks.named('wrapper', Wrapper).configure {
+    distributionType = Wrapper.DistributionType.BIN
+}
+
+version = mod_version
+group = mod_group_id
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+base {
+    archivesName = mod_id
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    withSourcesJar()
+}
+
+// --- NeoForge runs ---
+runs {
+    configureEach {
+        systemProperty 'forge.logging.markers', 'REGISTRIES'
+        systemProperty 'forge.logging.console.level', 'debug'
+        modSource project.sourceSets.main
+    }
+
+    client {
+        systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
+    }
+
+    server {
+        systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
+        argument '--nogui'
+    }
+
+    gameTestServer {
+        systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
+    }
+
+    data {
+        arguments.addAll '--mod', project.mod_id, '--all',
+                '--output', file('src/generated/resources/').getAbsolutePath(),
+                '--existing', file('src/main/resources/').getAbsolutePath()
+    }
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+}
+
+dependencies {
+    implementation "net.neoforged:neoforge:${neo_version}"
+
+    // ErrorProne + NullAway plumbing
+    errorprone "com.google.errorprone:error_prone_core:${errorprone_core_version}"
+    errorprone "com.uber.nullaway:nullaway:${nullaway_version}"
+
+    // JUnit 5 for the smoke test (and everything Phase 1+ adds).
+    testImplementation platform('org.junit:junit-bom:5.11.3')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly    'org.junit.platform:junit-platform-launcher'
+}
+
+// --- Resource property expansion (mods.toml) ---
+tasks.withType(ProcessResources).configureEach {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            neo_version_range      : neo_version_range,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/neoforge.mods.toml']) {
+        expand replaceProperties
+    }
+}
+
+// --- Java compile: UTF-8 + ErrorProne + NullAway ---
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.errorprone {
+        disableWarningsInGeneratedCode = true
+        excludedPaths = '.*/build/generated/.*'
+        // NullAway scope: everything under dev.recipetest.
+        option('NullAway:AnnotatedPackages', 'dev.recipetest')
+        option('NullAway:TreatGeneratedAsUnannotated', 'true')
+        check('NullAway', net.ltgt.gradle.errorprone.CheckSeverity.ERROR)
+    }
+}
+
+// Don't run ErrorProne / NullAway on test sources (JUnit + mocking patterns trip them).
+tasks.named('compileTestJava').configure {
+    options.errorprone.enabled = false
+}
+
+// --- Tests ---
+tasks.named('test', Test).configure {
+    useJUnitPlatform()
+    finalizedBy 'jacocoTestReport'
+}
+
+// --- Spotless: Palantir Java Format + license header ---
+spotless {
+    java {
+        target 'src/main/java/**/*.java', 'src/test/java/**/*.java'
+        targetExclude 'src/generated/**', 'src/main/java/**/mixin/**', 'src/main/java/**/accessor/**'
+        palantirJavaFormat()
+        licenseHeaderFile rootProject.file('config/spotless/license-header.txt')
+        removeUnusedImports()
+        endWithNewline()
+        trimTrailingWhitespace()
+    }
+}
+
+// --- Checkstyle ---
+checkstyle {
+    toolVersion = "${checkstyle_tool_version}"
+    configFile  = rootProject.file('config/checkstyle/checkstyle.xml')
+    maxWarnings = 0
+    ignoreFailures = false
+}
+
+tasks.withType(Checkstyle).configureEach {
+    exclude '**/mixin/**', '**/accessor/**', '**/generated/**'
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+// --- JaCoCo ---
+jacoco {
+    toolVersion = "${jacoco_tool_version}"
+}
+
+def coverageIncludes = [
+        'dev/recipetest/core/**',
+        'dev/recipetest/spec/**',
+        'dev/recipetest/command/**'
+]
+
+def coverageExcludes = [
+        '**/mixin/**',
+        '**/accessor/**',
+        '**/generated/**'
+]
+
+tasks.named('jacocoTestReport', JacocoReport).configure {
+    dependsOn 'test'
+    reports {
+        xml.required = true
+        html.required = true
+    }
+    classDirectories.setFrom(
+            files(classDirectories.files.collect {
+                fileTree(dir: it, includes: coverageIncludes, excludes: coverageExcludes)
+            })
+    )
+}
+
+tasks.named('jacocoTestCoverageVerification', JacocoCoverageVerification).configure {
+    dependsOn 'test'
+    classDirectories.setFrom(
+            files(classDirectories.files.collect {
+                fileTree(dir: it, includes: coverageIncludes, excludes: coverageExcludes)
+            })
+    )
+    violationRules {
+        rule {
+            element = 'BUNDLE'
+            // The threshold only fires once core/spec/command have measurable code; an empty
+            // bundle reports no violations rather than dividing by zero.
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.60
+            }
+        }
+    }
+}
+
+tasks.named('check').configure {
+    dependsOn 'jacocoTestCoverageVerification'
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/repo"
+        }
+    }
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}

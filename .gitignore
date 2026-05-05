@@ -1,0 +1,62 @@
+# --- Eclipse ---
+bin/
+*.launch
+.settings/
+.metadata/
+.classpath
+.project
+
+# --- IntelliJ IDEA ---
+out/
+*.ipr
+*.iws
+*.iml
+.idea/
+
+# --- VS Code ---
+.vscode/
+.vscode-test/
+*.code-workspace
+
+# --- Gradle ---
+build/
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# --- NeoForge / userdev ---
+eclipse/
+run/
+runs/
+run-data/
+src/generated/resources/.cache/
+repo/
+
+# --- Java / JVM ---
+*.class
+hs_err_pid*.log
+replay_pid*.log
+
+# --- Logs & crash reports ---
+*.log
+logs/
+crash-reports/
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Secrets & local env ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# --- Coverage / test reports (generated under build/ already, but belt-and-suspenders) ---
+*.exec
+*.gcov
+coverage/

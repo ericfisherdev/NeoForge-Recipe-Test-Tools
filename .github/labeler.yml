@@ -1,0 +1,64 @@
+# Path-based label rules for actions/labeler@v5.
+
+"area:api":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/main/java/dev/recipetest/api/**"
+
+"area:spec":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/main/java/dev/recipetest/spec/**"
+
+"area:core":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/main/java/dev/recipetest/core/**"
+
+"area:command":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/main/java/dev/recipetest/command/**"
+
+"area:gametest":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/main/java/dev/recipetest/gametest/**"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+
+build:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "build.gradle"
+          - "settings.gradle"
+          - "gradle.properties"
+          - "gradle/**"
+          - "gradlew"
+          - "gradlew.bat"
+          - "config/**"
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - "docs/**"
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/dependabot.yml"
+
+resources:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/main/resources/**"
+          - "src/generated/resources/**"
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/test/**"
