@@ -23,7 +23,7 @@ Coverage report after `./gradlew test`:
 
 ## Repo layout
 
-```
+```text
 src/main/java/dev/recipetest/
   api/          Public-facing extension surface (Phase 5)
   spec/         JSON spec + codecs + loader      (Phase 1)

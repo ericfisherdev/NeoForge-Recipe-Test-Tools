@@ -3,9 +3,13 @@ name: Release Drafter
 on:
   push:
     branches: [ "1.21.1" ]
-  pull_request:
-    types: [opened, reopened, synchronize]
   workflow_dispatch:
+
+# NOTE: release-drafter requires its config (.github/release-drafter.yml) to live on the
+# repo's default branch. While the default branch is `main` and this config only lives
+# on `1.21.1`, the action will fail. Resolve by either (a) merging the config to `main`,
+# or (b) changing the repo default branch to `1.21.1`. Until then the workflow runs only
+# post-merge to `1.21.1` and on manual dispatch — it will not block PR checks.
 
 permissions:
   contents: write
