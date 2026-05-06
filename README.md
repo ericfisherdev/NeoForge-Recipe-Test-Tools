@@ -5,9 +5,9 @@ Datapack-driven recipe testing harness for NeoForge mods. This worktree targets
 
 ## Status
 
-Phase 0 (bootstrap) — empty but buildable. See
-`/home/esfisher/Documents/Obsidian Vault/Personal/NeoForgeRecipeTestTools/plan/`
-for the full roadmap.
+Phase 0 (bootstrap) — empty but buildable. The full phase roadmap lives outside
+this repo in the maintainer's planning vault; per-phase status is mirrored in
+PR descriptions and release-drafter notes.
 
 ## Quick start
 
