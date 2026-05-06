@@ -63,6 +63,7 @@ final class DiffSubcommand {
         ServerLevel level = ctx.getSource().getLevel();
         RecipeManager recipeManager = level.getServer().getRecipeManager();
         RecipeHolder<?> holder = recipeManager.byKey(recipeId).orElseThrow(RECIPE_NOT_FOUND::create);
+        RunSubcommand.verifyRecipeType(level, holder, recipeType);
         RecipeAdapter adapter = RecipeAdapters.findFor(holder.value()).orElseThrow(NO_ADAPTER::create);
 
         BlockPos origin = ctx.getSource().getPosition() != null

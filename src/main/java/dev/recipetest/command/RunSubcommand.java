@@ -51,7 +51,7 @@ final class RunSubcommand {
             new SimpleCommandExceptionType(Component.literal("no spec registered for that recipeType"));
     private static final SimpleCommandExceptionType RECIPE_NOT_FOUND =
             new SimpleCommandExceptionType(Component.literal("recipe not found"));
-    private static final SimpleCommandExceptionType RECIPE_TYPE_MISMATCH =
+    static final SimpleCommandExceptionType RECIPE_TYPE_MISMATCH =
             new SimpleCommandExceptionType(Component.literal("recipe's type doesn't match the spec's recipeType"));
     private static final SimpleCommandExceptionType NO_ADAPTER =
             new SimpleCommandExceptionType(Component.literal("no RecipeAdapter applies to this recipe"));
@@ -70,13 +70,7 @@ final class RunSubcommand {
         RecipeManager recipeManager = level.getServer().getRecipeManager();
         RecipeHolder<?> holder = recipeManager.byKey(recipeId).orElseThrow(RECIPE_NOT_FOUND::create);
 
-        ResourceLocation actualType = level.registryAccess()
-                .registry(net.minecraft.core.registries.Registries.RECIPE_TYPE)
-                .orElseThrow()
-                .getKey(holder.value().getType());
-        if (actualType == null || !actualType.equals(recipeType)) {
-            throw RECIPE_TYPE_MISMATCH.create();
-        }
+        verifyRecipeType(level, holder, recipeType);
 
         RecipeAdapter adapter = RecipeAdapters.findFor(holder.value()).orElseThrow(NO_ADAPTER::create);
 
@@ -119,5 +113,21 @@ final class RunSubcommand {
     /** Helper exposed for {@link DiffSubcommand}'s shared lookup. */
     static Optional<MachineSpec> findSpec(ResourceLocation recipeType) {
         return HarnessRegistry.instance().byRecipeType(recipeType);
+    }
+
+    /**
+     * Throws {@link #RECIPE_TYPE_MISMATCH} if the resolved recipe's actual {@code RecipeType}
+     * doesn't match the {@code recipeType} the command was invoked with. Shared between {@link
+     * RunSubcommand} and {@link DiffSubcommand} so both reject mismatches consistently.
+     */
+    static void verifyRecipeType(ServerLevel level, RecipeHolder<?> holder, ResourceLocation expectedRecipeType)
+            throws CommandSyntaxException {
+        ResourceLocation actualType = level.registryAccess()
+                .registry(net.minecraft.core.registries.Registries.RECIPE_TYPE)
+                .orElseThrow()
+                .getKey(holder.value().getType());
+        if (actualType == null || !actualType.equals(expectedRecipeType)) {
+            throw RECIPE_TYPE_MISMATCH.create();
+        }
     }
 }
