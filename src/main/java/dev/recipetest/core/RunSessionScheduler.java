@@ -17,7 +17,6 @@
  */
 package dev.recipetest.core;
 
-import java.util.Iterator;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -54,14 +53,26 @@ public final class RunSessionScheduler {
         return active.size();
     }
 
-    /** Tick handler — call from a {@link ServerTickEvent.Post} listener. */
+    /**
+     * Tick handler — call from a {@link ServerTickEvent.Post} listener.
+     *
+     * <p>Drains via {@link ConcurrentLinkedQueue#poll()} up to the size at entry, advances each
+     * runner exactly once, and re-queues the unfinished ones at the tail. Snapshotting the size
+     * up front means runners submitted during this tick (e.g. by lifecycle commands or by the
+     * runner's own callback) wait until the next tick instead of being advanced twice. CLQ's
+     * iterator is weakly consistent, so the drain pattern keeps the per-tick semantics
+     * deterministic regardless of concurrent {@link #submit} calls.
+     */
     public void onServerTick(ServerTickEvent.Post event) {
-        Iterator<RecipeTestRunner> it = active.iterator();
-        while (it.hasNext()) {
-            RecipeTestRunner runner = it.next();
+        int budget = active.size();
+        for (int i = 0; i < budget; i++) {
+            RecipeTestRunner runner = active.poll();
+            if (runner == null) {
+                return;
+            }
             runner.advance();
-            if (runner.isDone()) {
-                it.remove();
+            if (!runner.isDone()) {
+                active.offer(runner);
             }
         }
     }

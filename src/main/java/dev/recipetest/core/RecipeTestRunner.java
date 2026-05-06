@@ -281,7 +281,7 @@ public final class RecipeTestRunner {
             List<FluidStack> fluids = adapter.extractInputFluids(recipe);
             int leftover = CapabilityDriver.injectFluids(binding, handler.get(), fluids);
             if (leftover > 0) {
-                warnings.add(leftover + "mB fluid input refused");
+                warnings.add(leftover + " mB fluid input refused");
             }
         });
 
