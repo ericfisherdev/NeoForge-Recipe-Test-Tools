@@ -27,6 +27,9 @@ import java.util.Optional;
 public record InputBinding(Optional<ItemBinding> items, Optional<FluidBinding> fluids, List<CustomBinding> custom) {
 
     public InputBinding {
+        java.util.Objects.requireNonNull(items, "InputBinding.items Optional must not be null");
+        java.util.Objects.requireNonNull(fluids, "InputBinding.fluids Optional must not be null");
+        java.util.Objects.requireNonNull(custom, "InputBinding.custom must not be null");
         custom = List.copyOf(custom);
     }
 }

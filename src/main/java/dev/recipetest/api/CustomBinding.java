@@ -17,6 +17,7 @@
  */
 package dev.recipetest.api;
 
+import java.util.Objects;
 import net.minecraft.resources.ResourceLocation;
 
 /**
@@ -27,4 +28,13 @@ import net.minecraft.resources.ResourceLocation;
  * @param kind extension identifier (e.g. {@code "mekanism:gas"})
  * @param ref opaque reference string the extension consumes (e.g. {@code "input_gas_tank"})
  */
-public record CustomBinding(ResourceLocation kind, String ref) {}
+public record CustomBinding(ResourceLocation kind, String ref) {
+
+    public CustomBinding {
+        Objects.requireNonNull(kind, "CustomBinding.kind must not be null");
+        Objects.requireNonNull(ref, "CustomBinding.ref must not be null");
+        if (ref.isBlank()) {
+            throw new IllegalArgumentException("CustomBinding.ref must not be blank");
+        }
+    }
+}

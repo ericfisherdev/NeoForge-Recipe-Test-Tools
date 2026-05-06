@@ -17,6 +17,7 @@
  */
 package dev.recipetest.api;
 
+import java.util.Objects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 
@@ -26,4 +27,10 @@ import net.minecraft.resources.ResourceLocation;
  * @param offset relative position from the machine origin (machine sits at {@code [0,0,0]})
  * @param block the block to place
  */
-public record NeighborSpec(BlockPos offset, ResourceLocation block) {}
+public record NeighborSpec(BlockPos offset, ResourceLocation block) {
+
+    public NeighborSpec {
+        Objects.requireNonNull(offset, "NeighborSpec.offset must not be null");
+        Objects.requireNonNull(block, "NeighborSpec.block must not be null");
+    }
+}

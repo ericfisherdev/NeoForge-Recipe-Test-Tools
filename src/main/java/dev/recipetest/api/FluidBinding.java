@@ -32,8 +32,16 @@ import java.util.List;
 public record FluidBinding(String capability, Side side, List<Integer> tanks) {
 
     public FluidBinding {
+        java.util.Objects.requireNonNull(capability, "FluidBinding.capability must not be null");
+        java.util.Objects.requireNonNull(side, "FluidBinding.side must not be null");
+        java.util.Objects.requireNonNull(tanks, "FluidBinding.tanks must not be null");
         if (tanks.isEmpty()) {
             throw new IllegalArgumentException("FluidBinding requires at least one tank index");
+        }
+        for (Integer t : tanks) {
+            if (t == null || t < 0) {
+                throw new IllegalArgumentException("FluidBinding.tanks indices must be non-negative, got " + t);
+            }
         }
         tanks = List.copyOf(tanks);
     }

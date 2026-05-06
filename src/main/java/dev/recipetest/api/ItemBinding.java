@@ -34,6 +34,22 @@ public record ItemBinding(
         String capability, Side side, List<Integer> slots, Optional<Layout> layout, Optional<Integer> primary) {
 
     public ItemBinding {
+        java.util.Objects.requireNonNull(capability, "ItemBinding.capability must not be null");
+        java.util.Objects.requireNonNull(side, "ItemBinding.side must not be null");
+        java.util.Objects.requireNonNull(slots, "ItemBinding.slots must not be null");
+        java.util.Objects.requireNonNull(layout, "ItemBinding.layout Optional must not be null");
+        java.util.Objects.requireNonNull(primary, "ItemBinding.primary Optional must not be null");
+        if (slots.isEmpty()) {
+            throw new IllegalArgumentException("ItemBinding.slots must contain at least one index");
+        }
+        for (Integer s : slots) {
+            if (s == null || s < 0) {
+                throw new IllegalArgumentException("ItemBinding.slots indices must be non-negative, got " + s);
+            }
+        }
+        // primary-in-slots is intentionally NOT checked here; that's spec rule §6 in
+        // json-spec.md and lives in SpecValidator (PR-B), which produces a structured
+        // ValidationIssue with a JSON pointer + fix hint instead of throwing.
         slots = List.copyOf(slots);
     }
 }
