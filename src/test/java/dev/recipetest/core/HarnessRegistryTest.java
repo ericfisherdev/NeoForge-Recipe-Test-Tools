@@ -182,6 +182,43 @@ class HarnessRegistryTest {
                 NullPointerException.class, () -> HarnessRegistry.instance().replaceAll(bad));
     }
 
+    @Test
+    @DisplayName("concurrent register() calls do not lose updates (CAS loop)")
+    void concurrentRegisterDoesNotLoseUpdates() throws InterruptedException {
+        int threads = 8;
+        int perThread = 25;
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(threads);
+        java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(threads);
+        try {
+            for (int t = 0; t < threads; t++) {
+                int threadIndex = t;
+                pool.submit(() -> {
+                    try {
+                        start.await();
+                        for (int i = 0; i < perThread; i++) {
+                            String id = "mod_" + threadIndex + ":spec_" + i;
+                            HarnessRegistry.instance().register(makeSpec(id, id));
+                        }
+                    } catch (InterruptedException ignored) {
+                        Thread.currentThread().interrupt();
+                    } finally {
+                        done.countDown();
+                    }
+                });
+            }
+            start.countDown();
+            assertTrue(
+                    done.await(10, java.util.concurrent.TimeUnit.SECONDS), "register threads did not finish in time");
+        } finally {
+            pool.shutdownNow();
+        }
+        // Without the CAS loop, racing read-modify-write on a volatile field would lose updates
+        // and the size would be < threads*perThread. With the AtomicReference.getAndUpdate path
+        // every register() retries until it observes its own write; the final size must be exact.
+        assertEquals(threads * perThread, HarnessRegistry.instance().size());
+    }
+
     private static MachineSpec makeSpec(String recipeType, String block) {
         return new MachineSpec(
                 1,

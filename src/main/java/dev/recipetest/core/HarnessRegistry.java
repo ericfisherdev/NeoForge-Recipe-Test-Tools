@@ -19,6 +19,7 @@ package dev.recipetest.core;
 
 import dev.recipetest.api.MachineSpec;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.SequencedMap;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicReference;
 import net.minecraft.resources.ResourceLocation;
 
 /**
@@ -33,21 +35,24 @@ import net.minecraft.resources.ResourceLocation;
  * Populated by {@code SpecLoader} on each datapack reload; queried by the
  * {@code /recipe_test} command surface.
  *
- * <p><b>Concurrency model.</b> The backing map is held in a {@code volatile} field and is itself
- * an immutable snapshot. Reload passes call {@link #replaceAll(Map)} to swap the entire map in
- * one atomic publish, so a reader on the server thread always sees either the pre-reload state
- * or the post-reload state — never an intermediate "registry is being rebuilt" view.
+ * <p><b>Concurrency model.</b> The backing map is held in an {@link AtomicReference} and is
+ * itself an immutable snapshot. {@link #replaceAll(Map)} swaps the entire map in one atomic
+ * publish, so a reader on the server thread always sees either the pre-reload state or the
+ * post-reload state — never an intermediate "registry is being rebuilt" view.
  *
- * <p>{@link #register(MachineSpec)} and {@link #clear()} remain available for direct programmatic
- * use (test setup, future single-spec hot-reload). They publish via the same volatile field but
- * each call is a separate publish — callers that want bulk-atomic semantics must use
- * {@link #replaceAll(Map)}.
+ * <p>{@link #register(MachineSpec)} uses an atomic compare-and-set loop so concurrent calls
+ * cannot lose updates. Each {@link #register(MachineSpec)} / {@link #clear()} call is its own
+ * publish — callers wanting bulk-atomic semantics must use {@link #replaceAll(Map)}.
+ *
+ * <p>Within any single reader method, the snapshot reference is captured once at the start so
+ * derived structures like {@link #byModid()} see a consistent view even if a writer publishes
+ * mid-iteration.
  */
 public final class HarnessRegistry {
 
     private static final HarnessRegistry INSTANCE = new HarnessRegistry();
 
-    private volatile Map<ResourceLocation, MachineSpec> specs = Map.of();
+    private final AtomicReference<Map<ResourceLocation, MachineSpec>> specs = new AtomicReference<>(Map.of());
 
     private HarnessRegistry() {}
 
@@ -56,7 +61,7 @@ public final class HarnessRegistry {
     }
 
     /**
-     * Atomically replace every entry. Single volatile write, so concurrent readers see either
+     * Atomically replace every entry. Single atomic write, so concurrent readers see either
      * the previous snapshot or the new one — not a half-built mix. Use this from the loader
      * instead of clear-then-many-register.
      */
@@ -74,34 +79,36 @@ public final class HarnessRegistry {
                         + " does not match spec.recipeType() " + declared);
             }
         }
-        this.specs = Map.copyOf(newSpecs);
+        specs.set(Map.copyOf(newSpecs));
     }
 
     /**
-     * Insert (or replace) a single spec. Each call is its own volatile publish; for bulk
-     * reload-time updates use {@link #replaceAll(Map)} so readers don't see partial state.
+     * Insert (or replace) a single spec. CAS-loop under the hood so concurrent register() calls
+     * cannot lose updates. For bulk reload-time updates use {@link #replaceAll(Map)} so readers
+     * don't see partial state.
      */
     public void register(MachineSpec spec) {
         Objects.requireNonNull(spec, "spec must not be null");
-        Map<ResourceLocation, MachineSpec> current = specs;
-        Map<ResourceLocation, MachineSpec> next = new java.util.HashMap<>(current);
-        next.put(spec.recipeType(), spec);
-        specs = Map.copyOf(next);
+        specs.getAndUpdate(current -> {
+            Map<ResourceLocation, MachineSpec> next = new HashMap<>(current);
+            next.put(spec.recipeType(), spec);
+            return Map.copyOf(next);
+        });
     }
 
     /** Look up a spec by recipeType. */
     public Optional<MachineSpec> byRecipeType(ResourceLocation recipeType) {
-        return Optional.ofNullable(specs.get(recipeType));
+        return Optional.ofNullable(currentSnapshot().get(recipeType));
     }
 
     /** Snapshot of all registered specs. Order is not stable; callers wanting ordering should
      *  use {@link #byModid()}. */
     public Collection<MachineSpec> all() {
-        return List.copyOf(specs.values());
+        return List.copyOf(currentSnapshot().values());
     }
 
     public int size() {
-        return specs.size();
+        return currentSnapshot().size();
     }
 
     /**
@@ -109,9 +116,10 @@ public final class HarnessRegistry {
      * mod ids in alphabetical order, specs within each group ordered by recipeType path.
      */
     public SequencedMap<String, List<MachineSpec>> byModid() {
+        Map<ResourceLocation, MachineSpec> snapshot = currentSnapshot();
         SequencedMap<String, List<MachineSpec>> grouped = new LinkedHashMap<>();
         Map<String, List<MachineSpec>> tmp = new TreeMap<>();
-        for (MachineSpec spec : specs.values()) {
+        for (MachineSpec spec : snapshot.values()) {
             tmp.computeIfAbsent(spec.recipeType().getNamespace(), k -> new java.util.ArrayList<>())
                     .add(spec);
         }
@@ -127,6 +135,16 @@ public final class HarnessRegistry {
 
     /** Drop all entries. For atomic reload-time replacement use {@link #replaceAll(Map)}. */
     public void clear() {
-        specs = Map.of();
+        specs.set(Map.of());
+    }
+
+    /**
+     * Returns the current snapshot, asserting non-null. The {@link AtomicReference} is seeded
+     * with {@link Map#of()} and every writer publishes a non-null map, so this can never return
+     * null at runtime — but {@code AtomicReference.get()} has a {@code @Nullable} signature, so
+     * this helper centralizes the assertion to keep NullAway happy at every call site.
+     */
+    private Map<ResourceLocation, MachineSpec> currentSnapshot() {
+        return Objects.requireNonNull(specs.get(), "registry snapshot is null — should be impossible");
     }
 }
