@@ -33,7 +33,6 @@ import dev.recipetest.api.Side;
 import dev.recipetest.api.TestContext;
 import dev.recipetest.api.TestResult;
 import dev.recipetest.api.TickBudget;
-import dev.recipetest.api.ValidationPolicy;
 import dev.recipetest.gametest.TestStructures;
 import java.util.ArrayList;
 import java.util.List;
@@ -434,11 +433,5 @@ public final class RecipeTestRunner {
             case TickBudget.Auto auto -> DEFAULT_AUTO_BUDGET;
             case TickBudget.Fixed fixed -> fixed.ticks();
         };
-    }
-
-    /** Honour the validation policy when comparing actual vs expected during the tick loop. */
-    @SuppressWarnings("unused")
-    private ValidationPolicy validation() {
-        return spec.validation();
     }
 }
