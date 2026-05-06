@@ -39,7 +39,10 @@ import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 
+@Execution(ExecutionMode.SAME_THREAD)
 class HarnessRegistryTest {
 
     @BeforeEach
@@ -162,8 +165,13 @@ class HarnessRegistryTest {
     }
 
     @Test
-    @DisplayName("replaceAll rejects map where key != spec.recipeType()")
+    @DisplayName("replaceAll rejects map where key != spec.recipeType() and leaves prior snapshot intact")
     void replaceAllKeyMismatchRejected() {
+        // Seed with a known entry so we can assert the throw path doesn't publish.
+        MachineSpec seed = makeSpec("seed:keep", "seed:keep");
+        HarnessRegistry.instance().register(seed);
+        assertEquals(1, HarnessRegistry.instance().size());
+
         MachineSpec spec = makeSpec("real:type", "real:type");
         ResourceLocation wrongKey = rl("wrong:key");
         java.util.Map<ResourceLocation, MachineSpec> bad = java.util.Map.of(wrongKey, spec);
@@ -171,15 +179,32 @@ class HarnessRegistryTest {
                 IllegalArgumentException.class, () -> HarnessRegistry.instance().replaceAll(bad));
         assertTrue(ex.getMessage().contains("wrong:key"));
         assertTrue(ex.getMessage().contains("real:type"));
+
+        // Atomicity: seed must still be present, the throwing replaceAll never published.
+        assertEquals(1, HarnessRegistry.instance().size());
+        assertSame(
+                seed, HarnessRegistry.instance().byRecipeType(seed.recipeType()).orElseThrow());
+        assertFalse(HarnessRegistry.instance().byRecipeType(rl("wrong:key")).isPresent());
+        assertFalse(HarnessRegistry.instance().byRecipeType(rl("real:type")).isPresent());
     }
 
     @Test
-    @DisplayName("replaceAll rejects null spec value")
+    @DisplayName("replaceAll rejects null spec value and leaves prior snapshot intact")
     void replaceAllNullValueRejected() {
+        MachineSpec seed = makeSpec("seed:keep", "seed:keep");
+        HarnessRegistry.instance().register(seed);
+        assertEquals(1, HarnessRegistry.instance().size());
+
         java.util.Map<ResourceLocation, MachineSpec> bad = new java.util.HashMap<>();
         bad.put(rl("a:x"), null);
         assertThrows(
                 NullPointerException.class, () -> HarnessRegistry.instance().replaceAll(bad));
+
+        // Atomicity: seed must still be present, the throwing replaceAll never published.
+        assertEquals(1, HarnessRegistry.instance().size());
+        assertSame(
+                seed, HarnessRegistry.instance().byRecipeType(seed.recipeType()).orElseThrow());
+        assertFalse(HarnessRegistry.instance().byRecipeType(rl("a:x")).isPresent());
     }
 
     @Test
