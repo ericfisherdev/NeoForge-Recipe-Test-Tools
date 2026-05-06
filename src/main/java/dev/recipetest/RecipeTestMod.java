@@ -18,10 +18,18 @@
 package dev.recipetest;
 
 import com.mojang.logging.LogUtils;
+import dev.recipetest.command.RecipeTestCommand;
+import dev.recipetest.core.HarnessRegistry;
+import dev.recipetest.spec.SpecLoader;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.AddReloadListenerEvent;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.slf4j.Logger;
 
 @Mod(RecipeTestMod.MODID)
@@ -33,9 +41,26 @@ public final class RecipeTestMod {
 
     public RecipeTestMod(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::onCommonSetup);
+        NeoForge.EVENT_BUS.addListener(this::onAddReloadListeners);
+        NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
         LOGGER.info("recipe_test: bootstrap ok");
+    }
+
+    private void onAddReloadListeners(AddReloadListenerEvent event) {
+        var registries = event.getRegistryAccess();
+        event.addListener(new SpecLoader(
+                HarnessRegistry.instance(),
+                rl -> registries
+                        .registry(Registries.RECIPE_TYPE)
+                        .map(reg -> reg.containsKey(rl))
+                        .orElse(false),
+                BuiltInRegistries.BLOCK::containsKey));
+    }
+
+    private void onRegisterCommands(RegisterCommandsEvent event) {
+        RecipeTestCommand.register(event.getDispatcher());
     }
 }
