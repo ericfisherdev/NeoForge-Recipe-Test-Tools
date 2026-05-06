@@ -169,7 +169,15 @@ def coverageIncludes = [
 def coverageExcludes = [
         '**/mixin/**',
         '**/accessor/**',
-        '**/generated/**'
+        '**/generated/**',
+        // Runtime-only classes that need a live MinecraftServer / ServerLevel — covered by manual
+        // /recipe_test run validation and GameTest harnesses (Phase 4), not unit tests.
+        'dev/recipetest/core/RecipeTestRunner*',
+        'dev/recipetest/core/RunSessionScheduler*',
+        'dev/recipetest/core/Snapshots*',
+        'dev/recipetest/spec/CapabilityProbe*',
+        'dev/recipetest/command/RunSubcommand*',
+        'dev/recipetest/command/DiffSubcommand*'
 ]
 
 tasks.named('jacocoTestReport', JacocoReport).configure {

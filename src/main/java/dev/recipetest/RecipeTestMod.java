@@ -20,6 +20,8 @@ package dev.recipetest;
 import com.mojang.logging.LogUtils;
 import dev.recipetest.command.RecipeTestCommand;
 import dev.recipetest.core.HarnessRegistry;
+import dev.recipetest.core.RunSessionScheduler;
+import dev.recipetest.spec.CapabilityProbe;
 import dev.recipetest.spec.SpecLoader;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -30,6 +32,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import org.slf4j.Logger;
 
 @Mod(RecipeTestMod.MODID)
@@ -43,6 +46,8 @@ public final class RecipeTestMod {
         modEventBus.addListener(this::onCommonSetup);
         NeoForge.EVENT_BUS.addListener(this::onAddReloadListeners);
         NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
+        NeoForge.EVENT_BUS.addListener(this::onServerStarted);
+        NeoForge.EVENT_BUS.addListener(RunSessionScheduler.instance()::onServerTick);
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
@@ -62,5 +67,9 @@ public final class RecipeTestMod {
 
     private void onRegisterCommands(RegisterCommandsEvent event) {
         RecipeTestCommand.register(event.getDispatcher());
+    }
+
+    private void onServerStarted(ServerStartedEvent event) {
+        CapabilityProbe.probeAll(event.getServer().overworld());
     }
 }
