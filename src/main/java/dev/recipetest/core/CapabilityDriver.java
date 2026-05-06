@@ -185,8 +185,10 @@ public final class CapabilityDriver {
             if (stack.isEmpty()) {
                 continue;
             }
-            result.add(new FluidSnapshot(
-                    BuiltInRegistries.FLUID.getKey(stack.getFluid()), stack.getAmount(), Optional.empty()));
+            Optional<String> nbt = stack.getComponents().isEmpty()
+                    ? Optional.empty()
+                    : Optional.of(stack.getComponents().toString());
+            result.add(new FluidSnapshot(BuiltInRegistries.FLUID.getKey(stack.getFluid()), stack.getAmount(), nbt));
         }
         return result;
     }

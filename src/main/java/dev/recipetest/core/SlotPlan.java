@@ -74,6 +74,15 @@ public final class SlotPlan {
         if (inputCount < 0) {
             throw new IllegalArgumentException("inputCount must be >= 0, got " + inputCount);
         }
+        for (int i = 0; i < slots.size(); i++) {
+            Integer slot = slots.get(i);
+            if (slot == null) {
+                throw new IllegalArgumentException("slots[" + i + "] must not be null");
+            }
+            if (slot < 0) {
+                throw new IllegalArgumentException("slots[" + i + "] must be >= 0, got " + slot);
+            }
+        }
         return switch (layout) {
             case SHAPELESS -> packOrdered(inputCount, slots, "shapeless");
             case ORDERED -> packOrdered(inputCount, slots, "ordered");
@@ -102,6 +111,7 @@ public final class SlotPlan {
                     "shaped3x3 expected " + inputCount + " position pairs, got " + positions.size());
         }
         List<Assignment> assignments = new ArrayList<>(inputCount);
+        boolean[] used = new boolean[9];
         for (int i = 0; i < inputCount; i++) {
             int[] pos = positions.get(i);
             if (pos == null || pos.length != 2) {
@@ -114,7 +124,13 @@ public final class SlotPlan {
                 throw new IllegalArgumentException(
                         "shaped3x3 position " + i + " out of range [0..2]: (" + x + ", " + y + ")");
             }
-            assignments.add(new Assignment(i, slots.get(y * 3 + x)));
+            int idx = y * 3 + x;
+            if (used[idx]) {
+                throw new IllegalArgumentException(
+                        "shaped3x3 duplicate position at (" + x + ", " + y + ") (input " + i + ")");
+            }
+            used[idx] = true;
+            assignments.add(new Assignment(i, slots.get(idx)));
         }
         return new Plan(assignments);
     }

@@ -110,7 +110,15 @@ public final class ResultDiffer {
         }
     }
 
+    /**
+     * Pick the candidate from {@code pool} whose count is closest to {@code expected.count()}
+     * (id + nbt must match per {@code mode}). Best-match — not first-match — so duplicate-id
+     * stacks reordered between expected and actual still pair correctly when treated as a
+     * multiset. Ties go to the earliest pool entry.
+     */
     private static int findItemMatch(ItemSnapshot expected, List<ItemSnapshot> pool, ValidationPolicy.NbtCompare mode) {
+        int bestIdx = -1;
+        int bestDelta = Integer.MAX_VALUE;
         for (int i = 0; i < pool.size(); i++) {
             ItemSnapshot candidate = pool.get(i);
             if (!candidate.id().equals(expected.id())) {
@@ -119,9 +127,16 @@ public final class ResultDiffer {
             if (!nbtMatches(expected.nbt(), candidate.nbt(), mode)) {
                 continue;
             }
-            return i;
+            int delta = Math.abs(expected.count() - candidate.count());
+            if (delta < bestDelta) {
+                bestDelta = delta;
+                bestIdx = i;
+                if (delta == 0) {
+                    break;
+                }
+            }
         }
-        return -1;
+        return bestIdx;
     }
 
     // ---- fluids ----
@@ -156,8 +171,11 @@ public final class ResultDiffer {
         }
     }
 
+    /** Best-amount-match counterpart to {@link #findItemMatch} — see that method's javadoc. */
     private static int findFluidMatch(
             FluidSnapshot expected, List<FluidSnapshot> pool, ValidationPolicy.NbtCompare mode) {
+        int bestIdx = -1;
+        int bestDelta = Integer.MAX_VALUE;
         for (int i = 0; i < pool.size(); i++) {
             FluidSnapshot candidate = pool.get(i);
             if (!candidate.id().equals(expected.id())) {
@@ -166,9 +184,16 @@ public final class ResultDiffer {
             if (!nbtMatches(expected.nbt(), candidate.nbt(), mode)) {
                 continue;
             }
-            return i;
+            int delta = Math.abs(expected.amount() - candidate.amount());
+            if (delta < bestDelta) {
+                bestDelta = delta;
+                bestIdx = i;
+                if (delta == 0) {
+                    break;
+                }
+            }
         }
-        return -1;
+        return bestIdx;
     }
 
     // ---- shared helpers ----

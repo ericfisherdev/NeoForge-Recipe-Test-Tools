@@ -130,4 +130,32 @@ class SlotPlanTest {
             assertEquals(List.of(), plan.assignments(), layout + " should produce empty plan for 0 inputs");
         }
     }
+
+    @Test
+    @DisplayName("dispatch rejects negative slot values")
+    void dispatchRejectsNegativeSlot() {
+        List<Integer> slotsWithNegative = java.util.Arrays.asList(0, -1, 2);
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> SlotPlan.dispatch(Layout.SHAPELESS, 1, slotsWithNegative, List.of()));
+    }
+
+    @Test
+    @DisplayName("dispatch rejects null slot entries")
+    void dispatchRejectsNullSlot() {
+        List<Integer> slotsWithNull = java.util.Arrays.asList(0, null, 2);
+        assertThrows(
+                IllegalArgumentException.class, () -> SlotPlan.dispatch(Layout.ORDERED, 1, slotsWithNull, List.of()));
+    }
+
+    @Test
+    @DisplayName("shaped3x3 rejects duplicate (x,y) coordinates")
+    void shaped3x3RejectsDuplicateCoords() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> SlotPlan.dispatch(
+                        Layout.SHAPED3X3, 2, List.of(0, 1, 2, 3, 4, 5, 6, 7, 8), List.of(new int[] {1, 1}, new int[] {
+                            1, 1
+                        })));
+    }
 }

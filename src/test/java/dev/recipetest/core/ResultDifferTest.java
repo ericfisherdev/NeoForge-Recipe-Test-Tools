@@ -231,4 +231,22 @@ class ResultDifferTest {
         assertEquals(2, diff.mismatches().size());
         assertFalse(diff.mismatches().stream().anyMatch(e -> e.path().equals("/items/extra")));
     }
+
+    @Test
+    @DisplayName("Duplicate same-id item stacks pair as multisets regardless of order")
+    void duplicateItemStacksSwappedOrder() {
+        IoSnapshot expected = new IoSnapshot(List.of(ItemSnapshot.of(STICK, 1), ItemSnapshot.of(STICK, 64)), List.of());
+        IoSnapshot actual = new IoSnapshot(List.of(ItemSnapshot.of(STICK, 64), ItemSnapshot.of(STICK, 1)), List.of());
+        assertTrue(ResultDiffer.diff(expected, actual, EXACT).isEmpty());
+    }
+
+    @Test
+    @DisplayName("Duplicate same-id fluid stacks pair as multisets regardless of order")
+    void duplicateFluidStacksSwappedOrder() {
+        IoSnapshot expected =
+                new IoSnapshot(List.of(), List.of(FluidSnapshot.of(WATER, 250), FluidSnapshot.of(WATER, 1000)));
+        IoSnapshot actual =
+                new IoSnapshot(List.of(), List.of(FluidSnapshot.of(WATER, 1000), FluidSnapshot.of(WATER, 250)));
+        assertTrue(ResultDiffer.diff(expected, actual, EXACT).isEmpty());
+    }
 }
