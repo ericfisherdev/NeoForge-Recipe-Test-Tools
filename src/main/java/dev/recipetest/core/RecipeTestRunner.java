@@ -99,6 +99,8 @@ public final class RecipeTestRunner {
     private final List<String> warnings = new ArrayList<>();
     private long initialEnergy = 0L;
     private long energyConsumed = 0L;
+    private boolean warnedMissingItemOutput;
+    private boolean warnedMissingFluidOutput;
 
     public RecipeTestRunner(
             MachineSpec spec,
@@ -167,6 +169,10 @@ public final class RecipeTestRunner {
                 return true;
             }
             case TICK -> {
+                // INJECT returned true, so one machine tick has already elapsed by the time
+                // this branch runs — count it before the match/budget checks so a tickBudget=1
+                // spec correctly times out at recipeTicks=1, not at the second observed tick.
+                recipeTicks++;
                 IoSnapshot actual = readOutputs();
                 lastActual = actual;
                 if (matchesExpected(actual)) {
@@ -178,7 +184,6 @@ public final class RecipeTestRunner {
                     phase = Phase.POST_TICK_COMMANDS;
                     return false;
                 }
-                recipeTicks++;
                 return true;
             }
             case POST_TICK_COMMANDS -> {
@@ -188,7 +193,7 @@ public final class RecipeTestRunner {
                 return false;
             }
             case REPORT -> {
-                callback.accept(buildResult());
+                safePublish(buildResult());
                 phase = Phase.CLEANUP;
                 return false;
             }
@@ -232,13 +237,25 @@ public final class RecipeTestRunner {
                 .items()
                 .map(binding -> resolveItemHandler(binding.side())
                         .map(handler -> CapabilityDriver.readItems(binding, handler))
-                        .orElseGet(List::of))
+                        .orElseGet(() -> {
+                            if (!warnedMissingItemOutput) {
+                                warnings.add("output items capability missing on side " + binding.side());
+                                warnedMissingItemOutput = true;
+                            }
+                            return List.of();
+                        }))
                 .orElse(List.of());
         List<FluidSnapshot> fluids = spec.outputs()
                 .fluids()
                 .map(binding -> resolveFluidHandler(binding.side())
                         .map(handler -> CapabilityDriver.readFluids(binding, handler))
-                        .orElseGet(List::of))
+                        .orElseGet(() -> {
+                            if (!warnedMissingFluidOutput) {
+                                warnings.add("output fluids capability missing on side " + binding.side());
+                                warnedMissingFluidOutput = true;
+                            }
+                            return List.of();
+                        }))
                 .orElse(List.of());
         return new IoSnapshot(items, fluids);
     }
@@ -322,8 +339,11 @@ public final class RecipeTestRunner {
             return;
         }
         BlockPos origin = ctx.origin();
+        // createCommandSourceStack() defaults to the overworld; bind the test's actual level so
+        // /setblock and /execute hooks target the placed machine even on non-overworld dimensions.
         CommandSourceStack source = ctx.server()
                 .createCommandSourceStack()
+                .withLevel(ctx.level())
                 .withPosition(Vec3.atCenterOf(origin))
                 .withSuppressedOutput();
         for (String command : commands) {
@@ -415,7 +435,7 @@ public final class RecipeTestRunner {
                 Optional.empty(),
                 diagnostics);
         try {
-            callback.accept(result);
+            safePublish(result);
         } finally {
             try {
                 TestStructures.tearDown(ctx.level(), placement);
@@ -423,6 +443,20 @@ public final class RecipeTestRunner {
                 // best-effort cleanup
             }
             phase = Phase.DONE;
+        }
+    }
+
+    /**
+     * Hand a result to the user-provided callback while keeping the scheduler isolated. A
+     * throwing callback would otherwise propagate through {@link #advance()} and abort the
+     * remaining drains in {@link RunSessionScheduler#onServerTick}.
+     */
+    private void safePublish(TestResult result) {
+        try {
+            callback.accept(result);
+        } catch (RuntimeException ignored) {
+            // Swallow — the runner has no recourse against a misbehaving consumer; cleanup
+            // proceeds in the caller's finally block.
         }
     }
 
