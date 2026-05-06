@@ -129,6 +129,38 @@ class HarnessRegistryTest {
         assertTrue(HarnessRegistry.instance().all().isEmpty());
     }
 
+    @Test
+    @DisplayName("replaceAll swaps the entire snapshot in one publish")
+    void replaceAllSwaps() {
+        HarnessRegistry.instance().register(makeSpec("old:one", "old:one"));
+        HarnessRegistry.instance().register(makeSpec("old:two", "old:two"));
+        assertEquals(2, HarnessRegistry.instance().size());
+
+        MachineSpec a = makeSpec("new:a", "new:a");
+        MachineSpec b = makeSpec("new:b", "new:b");
+        HarnessRegistry.instance().replaceAll(java.util.Map.of(a.recipeType(), a, b.recipeType(), b));
+
+        assertEquals(2, HarnessRegistry.instance().size());
+        assertTrue(HarnessRegistry.instance().byRecipeType(rl("new:a")).isPresent());
+        assertTrue(HarnessRegistry.instance().byRecipeType(rl("new:b")).isPresent());
+        assertFalse(HarnessRegistry.instance().byRecipeType(rl("old:one")).isPresent());
+    }
+
+    @Test
+    @DisplayName("replaceAll with empty map empties the registry")
+    void replaceAllEmpty() {
+        HarnessRegistry.instance().register(makeSpec("a:x", "a:x"));
+        HarnessRegistry.instance().replaceAll(java.util.Map.of());
+        assertEquals(0, HarnessRegistry.instance().size());
+    }
+
+    @Test
+    @DisplayName("replaceAll rejects null map")
+    void replaceAllNullRejected() {
+        assertThrows(
+                NullPointerException.class, () -> HarnessRegistry.instance().replaceAll(null));
+    }
+
     private static MachineSpec makeSpec(String recipeType, String block) {
         return new MachineSpec(
                 1,

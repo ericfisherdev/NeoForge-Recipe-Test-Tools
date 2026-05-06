@@ -32,8 +32,8 @@ final class ListFormatter {
     static String summarizeInputs(MachineSpec spec) {
         InputBinding b = spec.inputs();
         StringBuilder sb = new StringBuilder();
-        b.items().ifPresent(it -> sb.append("items[").append(it.slots().size()).append(" slots] "));
-        b.fluids().ifPresent(f -> sb.append("fluids[").append(f.tanks().size()).append(" tanks] "));
+        b.items().ifPresent(it -> appendCount(sb, "items", it.slots().size(), "slot"));
+        b.fluids().ifPresent(f -> appendCount(sb, "fluids", f.tanks().size(), "tank"));
         if (!b.custom().isEmpty()) {
             sb.append("custom[").append(b.custom().size()).append("] ");
         }
@@ -43,11 +43,19 @@ final class ListFormatter {
     static String summarizeOutputs(MachineSpec spec) {
         OutputBinding b = spec.outputs();
         StringBuilder sb = new StringBuilder();
-        b.items().ifPresent(it -> sb.append("items[").append(it.slots().size()).append(" slots] "));
-        b.fluids().ifPresent(f -> sb.append("fluids[").append(f.tanks().size()).append(" tanks] "));
+        b.items().ifPresent(it -> appendCount(sb, "items", it.slots().size(), "slot"));
+        b.fluids().ifPresent(f -> appendCount(sb, "fluids", f.tanks().size(), "tank"));
         if (!b.custom().isEmpty()) {
             sb.append("custom[").append(b.custom().size()).append("] ");
         }
         return sb.toString().stripTrailing();
+    }
+
+    private static void appendCount(StringBuilder sb, String label, int count, String unitSingular) {
+        sb.append(label).append('[').append(count).append(' ').append(unitSingular);
+        if (count != 1) {
+            sb.append('s');
+        }
+        sb.append("] ");
     }
 }

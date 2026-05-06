@@ -49,17 +49,17 @@ class ListFormatterTest {
     }
 
     @Test
-    @DisplayName("summarizeInputs handles items-only spec")
-    void inputsItemsOnly() {
+    @DisplayName("summarizeInputs uses singular labels when count == 1")
+    void inputsItemsOnlySingular() {
         MachineSpec spec = specWithInputs(Optional.of(items(0)), Optional.empty(), List.of());
-        assertEquals("items[1 slots]", ListFormatter.summarizeInputs(spec));
+        assertEquals("items[1 slot]", ListFormatter.summarizeInputs(spec));
     }
 
     @Test
-    @DisplayName("summarizeOutputs handles fluids-only spec")
-    void outputsFluidsOnly() {
+    @DisplayName("summarizeOutputs uses singular tank label when count == 1")
+    void outputsFluidsOnlySingular() {
         MachineSpec spec = specWithOutputs(Optional.empty(), Optional.of(fluids(7)), List.of());
-        assertEquals("fluids[1 tanks]", ListFormatter.summarizeOutputs(spec));
+        assertEquals("fluids[1 tank]", ListFormatter.summarizeOutputs(spec));
     }
 
     @Test

@@ -26,7 +26,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.SequencedMap;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.resources.ResourceLocation;
 
 /**
@@ -34,14 +33,21 @@ import net.minecraft.resources.ResourceLocation;
  * Populated by {@code SpecLoader} on each datapack reload; queried by the
  * {@code /recipe_test} command surface.
  *
- * <p>Concurrent-safe: the loader runs on the reload thread, commands run on the server thread,
- * and {@link #all()} / {@link #byModid()} take a snapshot at call time.
+ * <p><b>Concurrency model.</b> The backing map is held in a {@code volatile} field and is itself
+ * an immutable snapshot. Reload passes call {@link #replaceAll(Map)} to swap the entire map in
+ * one atomic publish, so a reader on the server thread always sees either the pre-reload state
+ * or the post-reload state — never an intermediate "registry is being rebuilt" view.
+ *
+ * <p>{@link #register(MachineSpec)} and {@link #clear()} remain available for direct programmatic
+ * use (test setup, future single-spec hot-reload). They publish via the same volatile field but
+ * each call is a separate publish — callers that want bulk-atomic semantics must use
+ * {@link #replaceAll(Map)}.
  */
 public final class HarnessRegistry {
 
     private static final HarnessRegistry INSTANCE = new HarnessRegistry();
 
-    private final Map<ResourceLocation, MachineSpec> specs = new ConcurrentHashMap<>();
+    private volatile Map<ResourceLocation, MachineSpec> specs = Map.of();
 
     private HarnessRegistry() {}
 
@@ -49,10 +55,27 @@ public final class HarnessRegistry {
         return INSTANCE;
     }
 
-    /** Insert (or replace) a spec keyed by its {@code recipeType}. */
+    /**
+     * Atomically replace every entry. Single volatile write, so concurrent readers see either
+     * the previous snapshot or the new one — not a half-built mix. Use this from the loader
+     * instead of clear-then-many-register.
+     */
+    public void replaceAll(Map<ResourceLocation, MachineSpec> newSpecs) {
+        Objects.requireNonNull(newSpecs, "newSpecs must not be null");
+        Map<ResourceLocation, MachineSpec> snapshot = Map.copyOf(newSpecs);
+        this.specs = snapshot;
+    }
+
+    /**
+     * Insert (or replace) a single spec. Each call is its own volatile publish; for bulk
+     * reload-time updates use {@link #replaceAll(Map)} so readers don't see partial state.
+     */
     public void register(MachineSpec spec) {
         Objects.requireNonNull(spec, "spec must not be null");
-        specs.put(spec.recipeType(), spec);
+        Map<ResourceLocation, MachineSpec> current = specs;
+        Map<ResourceLocation, MachineSpec> next = new java.util.HashMap<>(current);
+        next.put(spec.recipeType(), spec);
+        specs = Map.copyOf(next);
     }
 
     /** Look up a spec by recipeType. */
@@ -60,8 +83,8 @@ public final class HarnessRegistry {
         return Optional.ofNullable(specs.get(recipeType));
     }
 
-    /** Snapshot of all registered specs in insertion order is not preserved; callers that need
-     *  ordering should use {@link #byModid()} which sorts deterministically. */
+    /** Snapshot of all registered specs. Order is not stable; callers wanting ordering should
+     *  use {@link #byModid()}. */
     public Collection<MachineSpec> all() {
         return List.copyOf(specs.values());
     }
@@ -91,8 +114,8 @@ public final class HarnessRegistry {
         return grouped;
     }
 
-    /** Drop all entries — invoked by the loader at the start of every reload pass. */
+    /** Drop all entries. For atomic reload-time replacement use {@link #replaceAll(Map)}. */
     public void clear() {
-        specs.clear();
+        specs = Map.of();
     }
 }

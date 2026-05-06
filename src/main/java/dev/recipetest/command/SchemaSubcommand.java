@@ -20,6 +20,7 @@ package dev.recipetest.command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import com.mojang.logging.LogUtils;
 import dev.recipetest.RecipeTestMod;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,6 +31,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
+import org.slf4j.Logger;
 
 /**
  * {@code /recipe_test schema}: copy the bundled {@code machine_spec.schema.json} asset out
@@ -37,6 +39,8 @@ import net.minecraft.world.level.storage.LevelResource;
  * spec authors can wire it into their IDE.
  */
 final class SchemaSubcommand {
+
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     /** Resource path of the bundled schema asset. */
     static final String SCHEMA_RESOURCE = "/data/" + RecipeTestMod.MODID + "/schemas/machine_spec.schema.json";
@@ -59,11 +63,23 @@ final class SchemaSubcommand {
 
         try (InputStream in = SchemaSubcommand.class.getResourceAsStream(SCHEMA_RESOURCE)) {
             if (in == null) {
+                LOGGER.error(
+                        "[{}] /recipe_test schema: bundled asset {} is not on the classpath; expected to write to {}",
+                        RecipeTestMod.MODID,
+                        SCHEMA_RESOURCE,
+                        target);
                 throw MISSING_ASSET.create();
             }
             Files.createDirectories(target.getParent());
             Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException ex) {
+            LOGGER.error(
+                    "[{}] /recipe_test schema: failed to write {} to {}: {}",
+                    RecipeTestMod.MODID,
+                    SCHEMA_RESOURCE,
+                    target,
+                    ex.getMessage(),
+                    ex);
             throw WRITE_FAILED.create();
         }
 

@@ -56,6 +56,30 @@ class ValidationIssueTest {
     }
 
     @Test
+    @DisplayName("RFC 6901 escapes ~0 and ~1 are accepted")
+    void rfc6901EscapesAccepted() {
+        // ~0 escapes ~, ~1 escapes /
+        ValidationIssue a = ValidationIssue.error("/foo~0bar", "m", "h");
+        ValidationIssue b = ValidationIssue.error("/foo~1bar", "m", "h");
+        assertEquals("/foo~0bar", a.jsonPath());
+        assertEquals("/foo~1bar", b.jsonPath());
+    }
+
+    @Test
+    @DisplayName("trailing bare '~' is rejected")
+    void trailingTildeRejected() {
+        assertThrows(IllegalArgumentException.class, () -> ValidationIssue.error("/foo~", "m", "h"));
+    }
+
+    @Test
+    @DisplayName("'~' followed by something other than '0' or '1' is rejected")
+    void invalidTildeEscapeRejected() {
+        assertThrows(IllegalArgumentException.class, () -> ValidationIssue.error("/foo~2bar", "m", "h"));
+        assertThrows(IllegalArgumentException.class, () -> ValidationIssue.error("/foo~xbar", "m", "h"));
+        assertThrows(IllegalArgumentException.class, () -> ValidationIssue.error("/foo~~bar", "m", "h"));
+    }
+
+    @Test
     @DisplayName("any null component is rejected")
     void nullComponentsRejected() {
         assertThrows(NullPointerException.class, () -> new ValidationIssue(null, "/x", "m", "h"));

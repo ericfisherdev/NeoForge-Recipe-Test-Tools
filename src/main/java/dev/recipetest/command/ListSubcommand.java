@@ -56,10 +56,11 @@ final class ListSubcommand {
 
         boolean structured = ctx.getSource().getEntity() == null;
         if (structured) {
-            for (MachineSpec spec : registry.all()) {
-                ctx.getSource()
-                        .sendSuccess(() -> Component.literal(spec.recipeType().toString()), false);
-            }
+            String payload = registry.all().stream()
+                    .map(s -> s.recipeType().toString())
+                    .sorted()
+                    .collect(java.util.stream.Collectors.joining(System.lineSeparator()));
+            ctx.getSource().sendSuccess(() -> Component.literal(payload), false);
             return registry.size();
         }
 

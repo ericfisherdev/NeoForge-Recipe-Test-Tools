@@ -36,8 +36,42 @@ public record ValidationIssue(Severity severity, String jsonPath, String message
         Objects.requireNonNull(jsonPath, "jsonPath must not be null");
         Objects.requireNonNull(message, "message must not be null");
         Objects.requireNonNull(fixHint, "fixHint must not be null");
-        if (!jsonPath.isEmpty() && !jsonPath.startsWith("/")) {
-            throw new IllegalArgumentException("jsonPath must be a JSON Pointer (start with '/'), got: " + jsonPath);
+        validateJsonPointer(jsonPath);
+    }
+
+    /**
+     * Validate {@code jsonPath} as an RFC 6901 JSON Pointer:
+     *
+     * <ul>
+     *   <li>empty string is valid (root reference)
+     *   <li>otherwise must start with {@code /}
+     *   <li>{@code ~} is an escape character; the only legal sequences are {@code ~0} (escaped
+     *       {@code ~}) and {@code ~1} (escaped {@code /}). A trailing bare {@code ~} or
+     *       {@code ~} followed by anything else is rejected.
+     * </ul>
+     */
+    private static void validateJsonPointer(String jsonPath) {
+        if (jsonPath.isEmpty()) {
+            return;
+        }
+        if (jsonPath.charAt(0) != '/') {
+            throw new IllegalArgumentException(
+                    "jsonPath must be empty or a JSON Pointer (start with '/'), got: " + jsonPath);
+        }
+        int len = jsonPath.length();
+        for (int i = 0; i < len; i++) {
+            if (jsonPath.charAt(i) != '~') {
+                continue;
+            }
+            if (i + 1 >= len) {
+                throw new IllegalArgumentException(
+                        "jsonPath has trailing '~' which must be followed by '0' or '1': " + jsonPath);
+            }
+            char next = jsonPath.charAt(i + 1);
+            if (next != '0' && next != '1') {
+                throw new IllegalArgumentException(
+                        "jsonPath '~' must be followed by '0' or '1' per RFC 6901, got '~" + next + "': " + jsonPath);
+            }
         }
     }
 

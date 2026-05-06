@@ -78,8 +78,10 @@ public final class SpecLoader extends SimpleJsonResourceReloadListener {
     @Override
     protected void apply(
             Map<ResourceLocation, JsonElement> resources, ResourceManager resourceManager, ProfilerFiller profiler) {
-        registry.clear();
-        int loaded = 0;
+        // Build the new snapshot off to the side, then publish atomically via replaceAll. Readers
+        // on the server thread always see either the previous or the new snapshot — never a
+        // half-rebuilt registry.
+        Map<ResourceLocation, MachineSpec> nextSnapshot = new java.util.HashMap<>();
         int rejected = 0;
         for (Map.Entry<ResourceLocation, JsonElement> entry : resources.entrySet()) {
             ResourceLocation id = entry.getKey();
@@ -89,8 +91,8 @@ public final class SpecLoader extends SimpleJsonResourceReloadListener {
                     rejected++;
                     continue;
                 }
-                if (validateAndRegister(id, spec.get())) {
-                    loaded++;
+                if (validateForRegistry(id, spec.get())) {
+                    nextSnapshot.put(spec.get().recipeType(), spec.get());
                 } else {
                     rejected++;
                 }
@@ -100,7 +102,12 @@ public final class SpecLoader extends SimpleJsonResourceReloadListener {
                 rejected++;
             }
         }
-        LOGGER.info("[{}] reload complete: {} spec(s) registered, {} rejected", RecipeTestMod.MODID, loaded, rejected);
+        registry.replaceAll(nextSnapshot);
+        LOGGER.info(
+                "[{}] reload complete: {} spec(s) registered, {} rejected",
+                RecipeTestMod.MODID,
+                nextSnapshot.size(),
+                rejected);
     }
 
     private Optional<MachineSpec> parse(ResourceLocation id, JsonElement json) {
@@ -116,7 +123,7 @@ public final class SpecLoader extends SimpleJsonResourceReloadListener {
         return Optional.of(result.result().orElseThrow());
     }
 
-    private boolean validateAndRegister(ResourceLocation id, MachineSpec spec) {
+    private boolean validateForRegistry(ResourceLocation id, MachineSpec spec) {
         List<ValidationIssue> issues = SpecValidator.validate(spec, recipeTypeKnown, blockKnown);
         for (ValidationIssue issue : issues) {
             switch (issue.severity()) {
@@ -136,10 +143,6 @@ public final class SpecLoader extends SimpleJsonResourceReloadListener {
                         issue.fixHint());
             }
         }
-        if (!SpecValidator.isRegistryEligible(issues)) {
-            return false;
-        }
-        registry.register(spec);
-        return true;
+        return SpecValidator.isRegistryEligible(issues);
     }
 }
