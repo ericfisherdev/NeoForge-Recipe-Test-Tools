@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "recipeType": "examplemod:grinder",
+  "block": "examplemod:grinder",
+  "inputs":  { "items": { "capability": "ItemHandler", "slots": [0] } },
+  "outputs": { "items": { "capability": "ItemHandler", "slots": [1], "primary": 1 } },
+  "energy":  { "capability": "EnergyStorage", "preFill": 100000 },
+  "tickBudget": "auto"
+}
