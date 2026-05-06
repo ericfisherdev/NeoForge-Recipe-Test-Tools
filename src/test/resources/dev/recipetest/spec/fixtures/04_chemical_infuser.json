@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "recipeType": "mekanism:chemical_infuser",
+  "block": "mekanism:chemical_infuser",
+  "inputs": {
+    "custom": [
+      { "kind": "mekanism:chemical", "ref": "left_tank" },
+      { "kind": "mekanism:chemical", "ref": "right_tank" }
+    ]
+  },
+  "outputs": { "custom": [ { "kind": "mekanism:chemical", "ref": "output_tank" } ] },
+  "energy":  { "capability": "EnergyStorage", "preFill": 1000000 },
+  "tickBudget": 200
+}
