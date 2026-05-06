@@ -161,6 +161,27 @@ class HarnessRegistryTest {
                 NullPointerException.class, () -> HarnessRegistry.instance().replaceAll(null));
     }
 
+    @Test
+    @DisplayName("replaceAll rejects map where key != spec.recipeType()")
+    void replaceAllKeyMismatchRejected() {
+        MachineSpec spec = makeSpec("real:type", "real:type");
+        ResourceLocation wrongKey = rl("wrong:key");
+        java.util.Map<ResourceLocation, MachineSpec> bad = java.util.Map.of(wrongKey, spec);
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class, () -> HarnessRegistry.instance().replaceAll(bad));
+        assertTrue(ex.getMessage().contains("wrong:key"));
+        assertTrue(ex.getMessage().contains("real:type"));
+    }
+
+    @Test
+    @DisplayName("replaceAll rejects null spec value")
+    void replaceAllNullValueRejected() {
+        java.util.Map<ResourceLocation, MachineSpec> bad = new java.util.HashMap<>();
+        bad.put(rl("a:x"), null);
+        assertThrows(
+                NullPointerException.class, () -> HarnessRegistry.instance().replaceAll(bad));
+    }
+
     private static MachineSpec makeSpec(String recipeType, String block) {
         return new MachineSpec(
                 1,

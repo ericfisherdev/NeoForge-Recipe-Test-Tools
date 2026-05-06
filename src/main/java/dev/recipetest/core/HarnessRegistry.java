@@ -62,8 +62,19 @@ public final class HarnessRegistry {
      */
     public void replaceAll(Map<ResourceLocation, MachineSpec> newSpecs) {
         Objects.requireNonNull(newSpecs, "newSpecs must not be null");
-        Map<ResourceLocation, MachineSpec> snapshot = Map.copyOf(newSpecs);
-        this.specs = snapshot;
+        // byRecipeType / byModid assume the map key matches the spec's recipeType. Validate
+        // before publishing so a bad caller fails fast instead of silently corrupting lookups.
+        for (Map.Entry<ResourceLocation, MachineSpec> entry : newSpecs.entrySet()) {
+            Objects.requireNonNull(
+                    entry.getValue(),
+                    () -> "null spec for recipeType " + entry.getKey() + " in HarnessRegistry.replaceAll");
+            ResourceLocation declared = entry.getValue().recipeType();
+            if (!entry.getKey().equals(declared)) {
+                throw new IllegalArgumentException("HarnessRegistry.replaceAll: map key " + entry.getKey()
+                        + " does not match spec.recipeType() " + declared);
+            }
+        }
+        this.specs = Map.copyOf(newSpecs);
     }
 
     /**

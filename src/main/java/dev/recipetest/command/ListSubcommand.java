@@ -56,10 +56,11 @@ final class ListSubcommand {
 
         boolean structured = ctx.getSource().getEntity() == null;
         if (structured) {
+            // Fixed "\n" so rcon/console wrappers see the same payload regardless of host OS.
             String payload = registry.all().stream()
                     .map(s -> s.recipeType().toString())
                     .sorted()
-                    .collect(java.util.stream.Collectors.joining(System.lineSeparator()));
+                    .collect(java.util.stream.Collectors.joining("\n"));
             ctx.getSource().sendSuccess(() -> Component.literal(payload), false);
             return registry.size();
         }

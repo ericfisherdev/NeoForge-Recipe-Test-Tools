@@ -82,6 +82,8 @@ public final class SpecLoader extends SimpleJsonResourceReloadListener {
         // on the server thread always see either the previous or the new snapshot — never a
         // half-rebuilt registry.
         Map<ResourceLocation, MachineSpec> nextSnapshot = new java.util.HashMap<>();
+        // Track which file id won each recipeType so a duplicate can log both sources.
+        Map<ResourceLocation, ResourceLocation> recipeTypeOrigin = new java.util.HashMap<>();
         int rejected = 0;
         for (Map.Entry<ResourceLocation, JsonElement> entry : resources.entrySet()) {
             ResourceLocation id = entry.getKey();
@@ -91,11 +93,24 @@ public final class SpecLoader extends SimpleJsonResourceReloadListener {
                     rejected++;
                     continue;
                 }
-                if (validateForRegistry(id, spec.get())) {
-                    nextSnapshot.put(spec.get().recipeType(), spec.get());
-                } else {
+                if (!validateForRegistry(id, spec.get())) {
                     rejected++;
+                    continue;
                 }
+                ResourceLocation recipeType = spec.get().recipeType();
+                ResourceLocation existing = recipeTypeOrigin.get(recipeType);
+                if (existing != null) {
+                    LOGGER.error(
+                            "[{}] {}: duplicate recipeType '{}' already declared by {}; skipping this spec",
+                            RecipeTestMod.MODID,
+                            id,
+                            recipeType,
+                            existing);
+                    rejected++;
+                    continue;
+                }
+                nextSnapshot.put(recipeType, spec.get());
+                recipeTypeOrigin.put(recipeType, id);
             } catch (RuntimeException ex) {
                 LOGGER.error(
                         "[{}] {}: unexpected error loading spec: {}", RecipeTestMod.MODID, id, ex.getMessage(), ex);
