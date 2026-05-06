@@ -101,6 +101,7 @@ public final class RecipeTestRunner {
     private long energyConsumed = 0L;
     private boolean warnedMissingItemOutput;
     private boolean warnedMissingFluidOutput;
+    private boolean resultPublished;
 
     public RecipeTestRunner(
             MachineSpec spec,
@@ -194,6 +195,7 @@ public final class RecipeTestRunner {
             }
             case REPORT -> {
                 safePublish(buildResult());
+                resultPublished = true;
                 phase = Phase.CLEANUP;
                 return false;
             }
@@ -419,31 +421,32 @@ public final class RecipeTestRunner {
     // ---- error path ----
 
     private void handleException(RuntimeException ex) {
-        Diagnostics diagnostics = new Diagnostics(
-                List.of(),
-                0L,
-                List.of("runner exception: " + ex.getClass().getSimpleName() + ": " + ex.getMessage()),
-                List.of());
-        TestResult result = new TestResult(
-                recipeHolder.id(),
-                spec.recipeType(),
-                specSource,
-                RunStatus.ERROR,
-                phaseTicks + recipeTicks,
-                Objects.requireNonNullElse(expected, IoSnapshot.empty()),
-                Objects.requireNonNullElse(lastActual, IoSnapshot.empty()),
-                Optional.empty(),
-                diagnostics);
-        try {
+        // If REPORT already published the run's result, the user has seen the real outcome
+        // (PASS/FAIL/TIMEOUT) — a tearDown exception in CLEANUP must not override it with a
+        // synthetic ERROR. Cleanup still runs in the finally block below.
+        if (!resultPublished) {
+            List<String> errorWarnings = new ArrayList<>(warnings);
+            errorWarnings.add("runner exception: " + ex.getClass().getSimpleName() + ": " + ex.getMessage());
+            Diagnostics diagnostics = new Diagnostics(List.of(), 0L, List.copyOf(errorWarnings), List.of());
+            TestResult result = new TestResult(
+                    recipeHolder.id(),
+                    spec.recipeType(),
+                    specSource,
+                    RunStatus.ERROR,
+                    phaseTicks + recipeTicks,
+                    Objects.requireNonNullElse(expected, IoSnapshot.empty()),
+                    Objects.requireNonNullElse(lastActual, IoSnapshot.empty()),
+                    Optional.empty(),
+                    diagnostics);
             safePublish(result);
-        } finally {
-            try {
-                TestStructures.tearDown(ctx.level(), placement);
-            } catch (RuntimeException ignored) {
-                // best-effort cleanup
-            }
-            phase = Phase.DONE;
+            resultPublished = true;
         }
+        try {
+            TestStructures.tearDown(ctx.level(), placement);
+        } catch (RuntimeException ignored) {
+            // best-effort cleanup
+        }
+        phase = Phase.DONE;
     }
 
     /**
