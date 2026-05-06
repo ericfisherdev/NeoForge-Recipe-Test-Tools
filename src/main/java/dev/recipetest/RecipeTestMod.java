@@ -19,8 +19,10 @@ package dev.recipetest;
 
 import com.mojang.logging.LogUtils;
 import dev.recipetest.command.RecipeTestCommand;
+import dev.recipetest.core.HarnessConfig;
 import dev.recipetest.core.HarnessRegistry;
 import dev.recipetest.core.RunSessionScheduler;
+import dev.recipetest.core.TickScheduler;
 import dev.recipetest.spec.CapabilityProbe;
 import dev.recipetest.spec.SpecLoader;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -28,6 +30,7 @@ import net.minecraft.core.registries.Registries;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
@@ -43,11 +46,13 @@ public final class RecipeTestMod {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     public RecipeTestMod(IEventBus modEventBus, ModContainer modContainer) {
+        modContainer.registerConfig(ModConfig.Type.SERVER, HarnessConfig.SPEC);
         modEventBus.addListener(this::onCommonSetup);
         NeoForge.EVENT_BUS.addListener(this::onAddReloadListeners);
         NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
         NeoForge.EVENT_BUS.addListener(this::onServerStarted);
         NeoForge.EVENT_BUS.addListener(RunSessionScheduler.instance()::onServerTick);
+        NeoForge.EVENT_BUS.addListener(TickScheduler.instance()::onServerTick);
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {

@@ -28,6 +28,8 @@ package dev.recipetest.api;
  *       problem rather than a recipe disagreement.
  *   <li>{@link #SKIPPED} — runner deliberately did not execute (e.g. no recipe matched, optional
  *       mod absent, distribution mode pending sample collection).
+ *   <li>{@link #CANCELLED} — bulk-runner cancellation aborted the run before it completed; the
+ *       result records whatever partial actual snapshot was last observed.
  * </ul>
  */
 public enum RunStatus {
@@ -35,5 +37,6 @@ public enum RunStatus {
     FAIL,
     TIMEOUT,
     ERROR,
-    SKIPPED
+    SKIPPED,
+    CANCELLED
 }

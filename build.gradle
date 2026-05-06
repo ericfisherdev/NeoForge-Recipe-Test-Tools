@@ -175,9 +175,12 @@ def coverageExcludes = [
         'dev/recipetest/core/RecipeTestRunner*',
         'dev/recipetest/core/RunSessionScheduler*',
         'dev/recipetest/core/Snapshots*',
+        'dev/recipetest/core/TickScheduler*',
         'dev/recipetest/spec/CapabilityProbe*',
         'dev/recipetest/command/RunSubcommand*',
-        'dev/recipetest/command/DiffSubcommand*'
+        'dev/recipetest/command/DiffSubcommand*',
+        'dev/recipetest/command/BulkSubcommand*',
+        'dev/recipetest/command/CancelSubcommand*'
 ]
 
 tasks.named('jacocoTestReport', JacocoReport).configure {

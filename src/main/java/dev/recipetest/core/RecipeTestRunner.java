@@ -102,6 +102,7 @@ public final class RecipeTestRunner {
     private boolean warnedMissingItemOutput;
     private boolean warnedMissingFluidOutput;
     private boolean resultPublished;
+    private volatile boolean cancelRequested;
 
     public RecipeTestRunner(
             MachineSpec spec,
@@ -124,11 +125,25 @@ public final class RecipeTestRunner {
     }
 
     /**
+     * Request that the next {@link #advance()} call abort the run, tear down placement, and emit
+     * a {@link RunStatus#CANCELLED} result with whatever partial actual snapshot was last
+     * observed. Idempotent — calling {@code cancel()} after the run already completed is a
+     * no-op.
+     */
+    public void cancel() {
+        cancelRequested = true;
+    }
+
+    /**
      * Advance the state machine until the next tick boundary or completion. Called once per
      * {@code ServerTickEvent.Post} by the scheduler.
      */
     public void advance() {
         try {
+            if (cancelRequested && !resultPublished) {
+                emitCancelledResult();
+                return;
+            }
             while (!isDone()) {
                 if (advanceOne()) {
                     return;
@@ -416,6 +431,37 @@ public final class RecipeTestRunner {
             return RunStatus.TIMEOUT;
         }
         return RunStatus.FAIL;
+    }
+
+    // ---- cancellation path ----
+
+    /**
+     * Build and publish a {@link RunStatus#CANCELLED} result, then tear down placement. Carries
+     * whatever partial {@code lastActual} the runner had observed plus any accumulated warnings
+     * so the caller can see how far the run got before the abort signal arrived.
+     */
+    private void emitCancelledResult() {
+        List<String> cancelWarnings = new ArrayList<>(warnings);
+        cancelWarnings.add("run cancelled at phase " + phase + ", recipeTicks=" + recipeTicks);
+        Diagnostics diagnostics = new Diagnostics(List.of(), 0L, List.copyOf(cancelWarnings), List.of());
+        TestResult result = new TestResult(
+                recipeHolder.id(),
+                spec.recipeType(),
+                specSource,
+                RunStatus.CANCELLED,
+                phaseTicks + recipeTicks,
+                Objects.requireNonNullElse(expected, IoSnapshot.empty()),
+                Objects.requireNonNullElse(lastActual, IoSnapshot.empty()),
+                Optional.empty(),
+                diagnostics);
+        safePublish(result);
+        resultPublished = true;
+        try {
+            TestStructures.tearDown(ctx.level(), placement);
+        } catch (RuntimeException ignored) {
+            // best-effort cleanup
+        }
+        phase = Phase.DONE;
     }
 
     // ---- error path ----
