@@ -1,0 +1,213 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/ericfisherdev/NeoForge-Recipe-Test-Tools/blob/main/schemas/machine_spec.schema.json",
+  "title": "MachineSpec",
+  "description": "Datapack-driven recipe-test harness machine specification. One file per machine RecipeType under data/<modid>/recipe_test/machines/<name>.json.",
+  "type": "object",
+  "required": ["version", "recipeType", "block", "inputs", "outputs", "tickBudget"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version. Currently 1."
+    },
+    "recipeType": {
+      "type": "string",
+      "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$",
+      "description": "RecipeType ResourceLocation (namespace:path)."
+    },
+    "block": {
+      "type": "string",
+      "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$",
+      "description": "Block to place during testing."
+    },
+    "blockState": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Property overrides applied to the placed block."
+    },
+    "neighbors": {
+      "type": "array",
+      "description": "Adjacent blocks placed around the machine origin.",
+      "items": {
+        "type": "object",
+        "required": ["offset", "block"],
+        "additionalProperties": false,
+        "properties": {
+          "offset": {
+            "type": "array",
+            "items": { "type": "integer" },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Relative XYZ offset from the machine origin."
+          },
+          "block": {
+            "type": "string",
+            "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"
+          }
+        }
+      }
+    },
+    "inputs": { "$ref": "#/definitions/InputBinding" },
+    "outputs": { "$ref": "#/definitions/OutputBinding" },
+    "energy": { "$ref": "#/definitions/EnergySpec" },
+    "tickBudget": {
+      "oneOf": [
+        { "type": "string", "enum": ["auto"] },
+        { "type": "integer", "minimum": 1 }
+      ],
+      "description": "\"auto\" or a positive integer tick cap."
+    },
+    "validation": { "$ref": "#/definitions/ValidationPolicy" },
+    "lifecycle": { "$ref": "#/definitions/LifecycleHooks" }
+  },
+
+  "definitions": {
+    "Side": {
+      "type": "string",
+      "enum": ["TOP", "BOTTOM", "NORTH", "SOUTH", "EAST", "WEST", "ANY", "INTERNAL", "top", "bottom", "north", "south", "east", "west", "any", "internal"],
+      "description": "Capability query side. Case-insensitive in JSON; canonical form is uppercase."
+    },
+    "Layout": {
+      "type": "string",
+      "enum": ["shapeless", "shaped3x3", "ordered", "SHAPELESS", "SHAPED3X3", "ORDERED"],
+      "description": "How recipe ingredients map onto slots."
+    },
+    "ItemBinding": {
+      "type": "object",
+      "required": ["capability", "slots"],
+      "additionalProperties": false,
+      "properties": {
+        "capability": { "type": "string" },
+        "side": { "$ref": "#/definitions/Side" },
+        "slots": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 },
+          "minItems": 1
+        },
+        "layout": { "$ref": "#/definitions/Layout" },
+        "primary": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "FluidBinding": {
+      "type": "object",
+      "required": ["capability"],
+      "additionalProperties": false,
+      "properties": {
+        "capability": { "type": "string" },
+        "side": { "$ref": "#/definitions/Side" },
+        "tank": { "type": "integer", "minimum": 0 },
+        "tanks": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 },
+          "minItems": 1
+        }
+      },
+      "oneOf": [
+        { "required": ["tank"], "not": { "required": ["tanks"] } },
+        { "required": ["tanks"], "not": { "required": ["tank"] } }
+      ]
+    },
+    "CustomBinding": {
+      "type": "object",
+      "required": ["kind", "ref"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string" },
+        "ref": { "type": "string", "minLength": 1 }
+      }
+    },
+    "InputBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "items": { "$ref": "#/definitions/ItemBinding" },
+        "fluids": { "$ref": "#/definitions/FluidBinding" },
+        "custom": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/CustomBinding" }
+        }
+      }
+    },
+    "OutputBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "items": { "$ref": "#/definitions/ItemBinding" },
+        "fluids": { "$ref": "#/definitions/FluidBinding" },
+        "custom": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/CustomBinding" }
+        }
+      }
+    },
+    "EnergySpec": {
+      "type": "object",
+      "required": ["capability"],
+      "additionalProperties": false,
+      "properties": {
+        "capability": { "type": "string" },
+        "side": { "$ref": "#/definitions/Side" },
+        "preFill": { "type": "integer", "minimum": 0 },
+        "trackConsumption": { "type": "boolean" }
+      }
+    },
+    "ValidationPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["exact", "distribution", "subset", "EXACT", "DISTRIBUTION", "SUBSET"]
+        },
+        "itemTolerance": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "count": { "type": "integer", "minimum": 0 } }
+        },
+        "fluidTolerance": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "amount": { "type": "integer", "minimum": 0 } }
+        },
+        "nbtCompare": {
+          "type": "string",
+          "enum": ["structural", "ignore", "exact", "STRUCTURAL", "IGNORE", "EXACT"]
+        },
+        "samples": { "type": "integer", "minimum": 1 },
+        "distributionTolerance": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "LifecycleHooks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "preTickCommands": { "type": "array", "items": { "type": "string" } },
+        "postRunCommands": { "type": "array", "items": { "type": "string" } },
+        "warmupTicks": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+
+  "examples": [
+    {
+      "version": 1,
+      "recipeType": "examplemod:grinder",
+      "block": "examplemod:grinder",
+      "inputs":  { "items": { "capability": "ItemHandler", "slots": [0] } },
+      "outputs": { "items": { "capability": "ItemHandler", "slots": [1], "primary": 1 } },
+      "energy":  { "capability": "EnergyStorage", "preFill": 100000 },
+      "tickBudget": "auto"
+    },
+    {
+      "version": 1,
+      "recipeType": "forestry:centrifuge",
+      "block": "forestry:centrifuge",
+      "inputs":  { "items": { "capability": "ItemHandler", "slots": [0] } },
+      "outputs": { "items": { "capability": "ItemHandler", "slots": [1,2,3,4,5,6,7,8,9] } },
+      "validation": { "mode": "distribution", "samples": 1000, "distributionTolerance": 0.05 },
+      "tickBudget": "auto"
+    }
+  ]
+}
