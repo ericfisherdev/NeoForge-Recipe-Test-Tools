@@ -41,6 +41,14 @@ public final class RecipeTestCommand {
                         .executes(ListSubcommand::listAll)
                         .then(Commands.argument("recipeType", StringArgumentType.string())
                                 .executes(ListSubcommand::listOne)))
-                .then(Commands.literal("schema").executes(SchemaSubcommand::dump)));
+                .then(Commands.literal("schema").executes(SchemaSubcommand::dump))
+                .then(Commands.literal("run")
+                        .then(Commands.argument("recipeType", StringArgumentType.string())
+                                .then(Commands.argument("recipeId", StringArgumentType.string())
+                                        .executes(RunSubcommand::run))))
+                .then(Commands.literal("diff")
+                        .then(Commands.argument("recipeType", StringArgumentType.string())
+                                .then(Commands.argument("recipeId", StringArgumentType.string())
+                                        .executes(DiffSubcommand::run)))));
     }
 }

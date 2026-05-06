@@ -22,6 +22,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import dev.recipetest.api.MachineSpec;
 import dev.recipetest.core.HarnessRegistry;
+import dev.recipetest.spec.CapabilityProbe;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -95,6 +96,17 @@ final class ListSubcommand {
         s.energy().ifPresent(e -> ctx.getSource()
                 .sendSuccess(
                         () -> Component.literal("  energy: " + e.capability() + " preFill=" + e.preFill()), false));
+        List<String> probeIssues = CapabilityProbe.issuesFor(s.recipeType());
+        if (!probeIssues.isEmpty()) {
+            ctx.getSource()
+                    .sendSuccess(
+                            () -> Component.literal("  capability probe issues:")
+                                    .withStyle(ChatFormatting.YELLOW),
+                            false);
+            for (String issue : probeIssues) {
+                ctx.getSource().sendSuccess(() -> Component.literal("    " + issue), false);
+            }
+        }
         return 1;
     }
 
