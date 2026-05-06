@@ -54,7 +54,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download JaCoCo XML
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: jacoco-report
           path: build/reports/jacoco/test/
