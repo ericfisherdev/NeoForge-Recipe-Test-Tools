@@ -159,6 +159,41 @@ class TestResultRecordInvariantsTest {
     }
 
     @Test
+    @DisplayName("TestResult.CANCELLED is valid without a diff payload")
+    void testResultCancelledNoDiff() {
+        TestResult result = new TestResult(
+                RECIPE_ID,
+                RECIPE_TYPE,
+                "examplemod:thing.json",
+                RunStatus.CANCELLED,
+                7,
+                IoSnapshot.empty(),
+                IoSnapshot.empty(),
+                Optional.empty(),
+                Diagnostics.empty());
+        assertEquals(RunStatus.CANCELLED, result.status());
+        assertTrue(result.diff().isEmpty());
+    }
+
+    @Test
+    @DisplayName("TestResult.CANCELLED rejects an attached diff payload")
+    void testResultCancelledRejectsDiff() {
+        DiffPayload diff = new DiffPayload(List.of(new DiffEntry("/items/0", "a", "b", "x")));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new TestResult(
+                        RECIPE_ID,
+                        RECIPE_TYPE,
+                        "examplemod:thing.json",
+                        RunStatus.CANCELLED,
+                        7,
+                        IoSnapshot.empty(),
+                        IoSnapshot.empty(),
+                        Optional.of(diff),
+                        Diagnostics.empty()));
+    }
+
+    @Test
     @DisplayName("TestResult.PASS rejects an attached diff payload")
     void testResultPassRejectsDiff() {
         DiffPayload diff = new DiffPayload(List.of(new DiffEntry("/items/0", "a", "b", "x")));

@@ -45,8 +45,8 @@ public final class TestResultCodec {
                 try {
                     return DataResult.success(RunStatus.valueOf(name.toUpperCase(Locale.ROOT)));
                 } catch (IllegalArgumentException ex) {
-                    return DataResult.error(() ->
-                            "Unknown status '" + name + "' (expected one of: PASS, FAIL, TIMEOUT, ERROR, SKIPPED)");
+                    return DataResult.error(() -> "Unknown status '" + name
+                            + "' (expected one of: PASS, FAIL, TIMEOUT, ERROR, SKIPPED, CANCELLED)");
                 }
             },
             status -> DataResult.success(status.name()));
