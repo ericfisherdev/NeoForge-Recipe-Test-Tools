@@ -17,6 +17,7 @@
  */
 package dev.recipetest.api;
 
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -70,18 +71,28 @@ public record BulkResult(
             throw new IllegalArgumentException(
                     "BulkResult.peakMsptBudgetUsedMs must be >= 0, got " + peakMsptBudgetUsedMs);
         }
-        int countsSum = 0;
+        // Build the histogram of statuses actually present in `results`, then require an exact
+        // match with the provided countsByStatus (ignoring zero-valued entries since the doc
+        // says "statuses with zero count may be omitted"). Catches both sum mismatches AND
+        // payloads that report different statuses than the per-recipe results contain.
+        Map<RunStatus, Integer> derived = new EnumMap<>(RunStatus.class);
+        for (TestResult tr : results) {
+            derived.merge(tr.status(), 1, Integer::sum);
+        }
+        Map<RunStatus, Integer> normalized = new EnumMap<>(RunStatus.class);
         for (Map.Entry<RunStatus, Integer> entry : countsByStatus.entrySet()) {
             int v = entry.getValue();
             if (v < 0) {
                 throw new IllegalArgumentException(
                         "BulkResult.countsByStatus[" + entry.getKey() + "] must be >= 0, got " + v);
             }
-            countsSum += v;
+            if (v > 0) {
+                normalized.put(entry.getKey(), v);
+            }
         }
-        if (countsSum != results.size()) {
+        if (!normalized.equals(derived)) {
             throw new IllegalArgumentException(
-                    "BulkResult.countsByStatus sum (" + countsSum + ") must equal results.size()=" + results.size());
+                    "BulkResult.countsByStatus " + normalized + " does not match results histogram " + derived);
         }
         countsByStatus = Map.copyOf(countsByStatus);
         results = List.copyOf(results);

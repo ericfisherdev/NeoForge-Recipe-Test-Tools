@@ -205,8 +205,12 @@ public final class TickScheduler {
             return;
         }
 
-        long tickStart = System.currentTimeMillis();
-        long budget = HarnessConfig.BULK_MSPT_BUDGET_MS.get();
+        // Use nanoTime for elapsed measurement — currentTimeMillis is wall-clock and can jump
+        // backwards via NTP or manual clock changes, which would silently corrupt MSPT budget
+        // comparisons. wallClockMs (the user-facing total run duration in BulkResult) stays on
+        // currentTimeMillis where the absolute time-of-day reading is what matters.
+        long tickStartNanos = System.nanoTime();
+        long budgetMs = HarnessConfig.BULK_MSPT_BUDGET_MS.get();
 
         // Drain on cancel: emit any in-flight CANCELLED result, then finalise. The cancel-tick
         // is real work the harness did; track it in totalEngineTicks / peakMspt so the final
@@ -219,15 +223,15 @@ public final class TickScheduler {
                     run.current = null;
                 }
                 run.totalEngineTicks++;
-                long cancelElapsed = System.currentTimeMillis() - tickStart;
-                if (cancelElapsed > run.peakMsptBudgetUsedMs) {
-                    run.peakMsptBudgetUsedMs = cancelElapsed;
+                long cancelElapsedMs = (System.nanoTime() - tickStartNanos) / 1_000_000L;
+                if (cancelElapsedMs > run.peakMsptBudgetUsedMs) {
+                    run.peakMsptBudgetUsedMs = cancelElapsedMs;
                 }
-                if (cancelElapsed > budget) {
+                if (cancelElapsedMs > budgetMs) {
                     LOGGER.warn(
                             "recipe_test bulk: cancel tick exceeded MSPT budget ({} ms > {} ms) for run {}",
-                            cancelElapsed,
-                            budget,
+                            cancelElapsedMs,
+                            budgetMs,
                             run.runId);
                 }
             }
@@ -254,15 +258,15 @@ public final class TickScheduler {
             run.current = null;
         }
 
-        long elapsed = System.currentTimeMillis() - tickStart;
-        if (elapsed > run.peakMsptBudgetUsedMs) {
-            run.peakMsptBudgetUsedMs = elapsed;
+        long elapsedMs = (System.nanoTime() - tickStartNanos) / 1_000_000L;
+        if (elapsedMs > run.peakMsptBudgetUsedMs) {
+            run.peakMsptBudgetUsedMs = elapsedMs;
         }
-        if (elapsed > budget) {
+        if (elapsedMs > budgetMs) {
             LOGGER.warn(
                     "recipe_test bulk: tick exceeded MSPT budget ({} ms > {} ms) for run {}",
-                    elapsed,
-                    budget,
+                    elapsedMs,
+                    budgetMs,
                     run.runId);
         }
 
@@ -294,9 +298,12 @@ public final class TickScheduler {
         int everyN = HarnessConfig.PROGRESS_REPORT_EVERY_N.get();
         int everyTicks = HarnessConfig.PROGRESS_REPORT_EVERY_TICKS.get();
         boolean emit = run.completedSinceLastProgress >= everyN || run.ticksSinceLastProgress >= everyTicks;
-        if (!emit || run.completed() == 0) {
+        if (!emit) {
             return;
         }
+        // Don't gate on completed > 0 — BulkProgress and ProgressReporter both handle the
+        // "no completions yet" case, and a long first recipe should still trigger the
+        // progressReportEveryTicks fallback so the operator gets a heartbeat.
         run.completedSinceLastProgress = 0;
         run.ticksSinceLastProgress = 0;
         // Surfacing the in-flight recipe id requires plumbing through RecipeTestRunner; deferred
