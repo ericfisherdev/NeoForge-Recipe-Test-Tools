@@ -63,7 +63,10 @@ Drop a JSON file at `src/main/resources/data/<your_modid>/recipe_test/machines/<
 }
 ```
 
-Full schema reference lives in [`json-spec.md`](../localfiles/docs/specs/json-spec.md).
+The full JSON schema reference is being prepared as `docs/specs/json-spec.md`;
+until it ships, every spec field with examples is documented inline on the
+`MachineSpec` record (`src/main/java/dev/recipetest/api/MachineSpec.java`) and
+on the codecs in `src/main/java/dev/recipetest/spec/`.
 Validate locally with:
 
 ```sh

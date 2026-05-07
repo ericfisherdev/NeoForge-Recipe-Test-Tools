@@ -17,8 +17,15 @@
 #                          failing the GameTest. For triage runs where you want to
 #                          see every failure, not just the first.
 #
-# Memory: NeoForge dev runs are memory-hungry. `-Xmx4G` is the default starting point;
-# bump to 6-8 GB if your machine spec includes large neighbour blueprints.
+# Memory: NeoForge dev runs are memory-hungry. The forked Minecraft server is a separate
+# JVM from Gradle itself, so `GRADLE_OPTS` does NOT control its heap. Configure the game
+# server's heap via `jvmArguments` on the `gameTestServer` run in your `build.gradle`:
+#
+#     runs {
+#         gameTestServer {
+#             jvmArguments '-Xmx4G'    // bump to '-Xmx8G' for large machine specs
+#         }
+#     }
 
 name: Recipe Tests
 
@@ -48,7 +55,9 @@ jobs:
         java: ['21']
         neoforge: ['21.1.213']
     env:
-      GRADLE_OPTS: -Xmx4G -Dfile.encoding=UTF-8
+      # Gradle's own JVM only — the game server JVM is forked and configured via
+      # `jvmArguments` in build.gradle (see comment at top of this file).
+      GRADLE_OPTS: -Dfile.encoding=UTF-8
 
     steps:
       - name: Checkout
@@ -81,7 +90,7 @@ jobs:
 
       - name: Publish test report
         if: always()
-        uses: dorny/test-reporter@v2
+        uses: dorny/test-reporter@v3
         with:
           name: Recipe Tests (JDK ${{ matrix.java }})
           path: build/gametest/results/recipe-test.xml
