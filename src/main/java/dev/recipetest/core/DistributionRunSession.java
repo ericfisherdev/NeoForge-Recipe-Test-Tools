@@ -88,6 +88,19 @@ public final class DistributionRunSession {
     private final AtomicBoolean finished = new AtomicBoolean();
     private final AtomicBoolean cancelled = new AtomicBoolean();
 
+    /**
+     * Trampoline guard. When a sync submitter calls back into the session inside
+     * {@code submitter.submit()}, the inner {@link #submitNext} would otherwise recurse —
+     * Phase 5 AC#1 wants 1000 samples, which would blow the stack. Instead, the inner call sees
+     * {@code submitting == true}, flips {@link #needsAnotherSubmit}, and unwinds; the outer
+     * loop then keeps iterating. Async submitters take the empty-flag path: the outer loop
+     * exits after one submit, and the eventual async callback re-enters {@link #submitNext}
+     * fresh.
+     */
+    private final AtomicBoolean submitting = new AtomicBoolean();
+
+    private final AtomicBoolean needsAnotherSubmit = new AtomicBoolean();
+
     private DistributionRunSession(
             MachineSpec spec,
             RecipeHolder<?> holder,
@@ -174,20 +187,40 @@ public final class DistributionRunSession {
     // ---- internals ----
 
     private void submitNext() {
-        if (cancelled.get() || completed.get() >= totalSamples) {
-            tryFinalise();
+        // Trampoline: if a submit/callback chain is already running on this thread, just flag
+        // the desire for another submit and return. The outer loop picks it up on the next
+        // iteration without growing the stack. Async submitters that don't fire the callback
+        // synchronously take the empty-flag path: the loop exits, and the async callback's
+        // own submitNext() call re-enters here fresh after the outer loop has released the CAS.
+        if (!submitting.compareAndSet(false, true)) {
+            needsAnotherSubmit.set(true);
             return;
         }
         try {
-            submitter.submit(spec, holder, ctx, adapter, specSource, this::onSampleComplete);
-        } catch (RuntimeException e) {
-            LOGGER.error(
-                    "recipe_test: distribution session aborted — submitter threw on sample {}/{}: {}",
-                    completed.get() + 1,
-                    totalSamples,
-                    e.toString());
-            cancelled.set(true);
-            tryFinalise();
+            do {
+                needsAnotherSubmit.set(false);
+                if (cancelled.get() || completed.get() >= totalSamples) {
+                    tryFinalise();
+                    return;
+                }
+                try {
+                    submitter.submit(spec, holder, ctx, adapter, specSource, this::onSampleComplete);
+                } catch (RuntimeException e) {
+                    LOGGER.error(
+                            "recipe_test: distribution session aborted — submitter threw on sample {}/{}: {}",
+                            completed.get() + 1,
+                            totalSamples,
+                            e.toString());
+                    cancelled.set(true);
+                    tryFinalise();
+                    return;
+                }
+                // If the callback fired synchronously, onSampleComplete called submitNext() which
+                // saw submitting=true and set needsAnotherSubmit. Loop back. If the callback was
+                // async, the flag stays false and we exit; the callback will re-enter later.
+            } while (needsAnotherSubmit.get());
+        } finally {
+            submitting.set(false);
         }
     }
 
