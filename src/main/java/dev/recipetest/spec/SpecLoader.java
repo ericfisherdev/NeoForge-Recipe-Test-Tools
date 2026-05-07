@@ -64,15 +64,29 @@ public final class SpecLoader extends SimpleJsonResourceReloadListener {
     private final HarnessRegistry registry;
     private final Predicate<ResourceLocation> recipeTypeKnown;
     private final Predicate<ResourceLocation> blockKnown;
+    private final Predicate<ResourceLocation> customKindKnown;
 
     public SpecLoader(
             HarnessRegistry registry,
             Predicate<ResourceLocation> recipeTypeKnown,
             Predicate<ResourceLocation> blockKnown) {
+        // Backwards-compatible constructor: defaults custom-kind validation to "everything is
+        // resolvable" so existing tests that don't know about Phase 5 extensions still pass.
+        // Production callers should prefer the four-arg constructor and wire
+        // ExtensionRegistry.instance().kindKnownPredicate().
+        this(registry, recipeTypeKnown, blockKnown, kind -> true);
+    }
+
+    public SpecLoader(
+            HarnessRegistry registry,
+            Predicate<ResourceLocation> recipeTypeKnown,
+            Predicate<ResourceLocation> blockKnown,
+            Predicate<ResourceLocation> customKindKnown) {
         super(new Gson(), FOLDER);
         this.registry = registry;
         this.recipeTypeKnown = recipeTypeKnown;
         this.blockKnown = blockKnown;
+        this.customKindKnown = customKindKnown;
     }
 
     @Override
@@ -139,7 +153,7 @@ public final class SpecLoader extends SimpleJsonResourceReloadListener {
     }
 
     private boolean validateForRegistry(ResourceLocation id, MachineSpec spec) {
-        List<ValidationIssue> issues = SpecValidator.validate(spec, recipeTypeKnown, blockKnown);
+        List<ValidationIssue> issues = SpecValidator.validate(spec, recipeTypeKnown, blockKnown, customKindKnown);
         for (ValidationIssue issue : issues) {
             switch (issue.severity()) {
                 case ERROR -> LOGGER.error(
