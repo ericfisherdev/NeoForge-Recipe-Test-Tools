@@ -85,7 +85,7 @@ public final class JunitXmlReporter implements TestReporter {
     private final TestReporter delegate;
     private final Path outputPath;
     private final List<Row> rows = new ArrayList<>();
-    private final Instant suiteStart = Instant.now();
+    private Instant suiteStart = Instant.now();
 
     JunitXmlReporter(TestReporter delegate, Path outputPath) {
         this.delegate = Objects.requireNonNull(delegate, "delegate");
@@ -128,6 +128,22 @@ public final class JunitXmlReporter implements TestReporter {
         RESULTS.clear();
     }
 
+    /** Test seam — same lookup the real {@link #onTestSuccess} / {@link #onTestFailed} path uses
+     *  so unit tests can exercise it without mocking {@link GameTestInfo}. */
+    static Optional<TestResult> recordedResultForTesting(String testName) {
+        return Optional.ofNullable(RESULTS.get(testName));
+    }
+
+    /** Test seam — current row count, for verifying that {@link #finish()} resets state. */
+    int rowCountForTesting() {
+        return rows.size();
+    }
+
+    /** Test seam — for asserting accumulation reset on {@link #finish()}. */
+    Instant suiteStartForTesting() {
+        return suiteStart;
+    }
+
     @Override
     public void onTestFailed(GameTestInfo testInfo) {
         String name = testInfo.getTestName();
@@ -146,8 +162,20 @@ public final class JunitXmlReporter implements TestReporter {
 
     @Override
     public void finish() {
+        // Snapshot then reset so a second test run (e.g. a dev-client datapack reload that re-fires
+        // RegisterGameTestsEvent and re-uses this same reporter instance) starts from a clean slate
+        // instead of duplicate-inflating rows and stretching suiteStart further into the past.
+        List<Row> snapshot;
+        Instant runStart;
+        synchronized (rows) {
+            snapshot = new ArrayList<>(rows);
+            rows.clear();
+            runStart = suiteStart;
+            suiteStart = Instant.now();
+        }
+        RESULTS.clear();
         try {
-            writeReport(outputPath, rows, suiteStart, Instant.now());
+            writeReport(outputPath, snapshot, runStart, Instant.now());
         } catch (IOException e) {
             LOGGER.error("recipe_test: failed to write JUnit XML to {}: {}", outputPath, e.toString());
         }
