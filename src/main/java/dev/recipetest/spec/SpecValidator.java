@@ -17,6 +17,7 @@
  */
 package dev.recipetest.spec;
 
+import dev.recipetest.api.CustomBinding;
 import dev.recipetest.api.ItemBinding;
 import dev.recipetest.api.Layout;
 import dev.recipetest.api.MachineSpec;
@@ -46,6 +47,9 @@ import net.minecraft.resources.ResourceLocation;
  *       {@link ValidationIssue.Severity#ERROR}
  *   <li>{@code outputs.items.primary} not contained in {@code outputs.items.slots} →
  *       {@link ValidationIssue.Severity#ERROR}
+ *   <li>{@code inputs.custom[i].kind} or {@code outputs.custom[i].kind} that no registered
+ *       {@code RecipeTestExtension} claims via {@code supportedKinds()} →
+ *       {@link ValidationIssue.Severity#ERROR} (Phase 5 AC#4)
  * </ol>
  *
  * <p>Capability-presence checking is deferred to Phase 2 (needs a temp world placement).
@@ -71,6 +75,24 @@ public final class SpecValidator {
      */
     public static List<ValidationIssue> validate(
             MachineSpec spec, Predicate<ResourceLocation> recipeTypeKnown, Predicate<ResourceLocation> blockKnown) {
+        // Default the kind predicate to "everything resolves" so existing call sites that don't
+        // know about extensions don't start emitting spurious errors. Production wires this from
+        // ExtensionRegistry.kindKnownPredicate(); tests pass their own.
+        return validate(spec, recipeTypeKnown, blockKnown, kind -> true);
+    }
+
+    /**
+     * Validate a spec with extension-aware kind resolution.
+     *
+     * @param customKindKnown predicate answering "does some registered {@code
+     *     RecipeTestExtension} claim this {@link CustomBinding#kind}?". Wire to
+     *     {@code ExtensionRegistry.instance().kindKnownPredicate()} in production.
+     */
+    public static List<ValidationIssue> validate(
+            MachineSpec spec,
+            Predicate<ResourceLocation> recipeTypeKnown,
+            Predicate<ResourceLocation> blockKnown,
+            Predicate<ResourceLocation> customKindKnown) {
         List<ValidationIssue> issues = new ArrayList<>();
         validateVersion(spec, issues);
         validateRecipeType(spec, recipeTypeKnown, issues);
@@ -78,6 +100,7 @@ public final class SpecValidator {
         spec.inputs().items().ifPresent(items -> validateInputItemLayout(items, issues));
         validateDistributionSamples(spec.validation(), issues);
         spec.outputs().items().ifPresent(items -> validatePrimaryInSlots(items, issues));
+        validateCustomBindingKinds(spec, customKindKnown, issues);
         return List.copyOf(issues);
     }
 
@@ -127,6 +150,30 @@ public final class SpecValidator {
                     "/validation/samples",
                     "distribution mode needs at least 10 samples for meaningful statistics",
                     "set samples to >= 10, got " + policy.samples()));
+        }
+    }
+
+    private static void validateCustomBindingKinds(
+            MachineSpec spec, Predicate<ResourceLocation> customKindKnown, List<ValidationIssue> out) {
+        List<CustomBinding> inputs = spec.inputs().custom();
+        for (int i = 0; i < inputs.size(); i++) {
+            CustomBinding cb = inputs.get(i);
+            if (!customKindKnown.test(cb.kind())) {
+                out.add(ValidationIssue.error(
+                        "/inputs/custom/" + i + "/kind",
+                        "unresolved custom binding kind '" + cb.kind() + "'",
+                        "register a RecipeTestExtension whose supportedKinds() contains '" + cb.kind() + "'"));
+            }
+        }
+        List<CustomBinding> outputs = spec.outputs().custom();
+        for (int i = 0; i < outputs.size(); i++) {
+            CustomBinding cb = outputs.get(i);
+            if (!customKindKnown.test(cb.kind())) {
+                out.add(ValidationIssue.error(
+                        "/outputs/custom/" + i + "/kind",
+                        "unresolved custom binding kind '" + cb.kind() + "'",
+                        "register a RecipeTestExtension whose supportedKinds() contains '" + cb.kind() + "'"));
+            }
         }
     }
 

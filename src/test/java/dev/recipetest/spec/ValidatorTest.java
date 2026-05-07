@@ -177,6 +177,85 @@ class ValidatorTest {
         assertFalse(SpecValidator.isRegistryEligible(SpecValidator.validate(broken, ALL_KNOWN, BLOCK_KNOWN)));
     }
 
+    @Test
+    @DisplayName("Rule 7 FAIL: unresolved input custom kind emits ERROR at /inputs/custom/0/kind")
+    void unresolvedInputKindFails() {
+        MachineSpec spec = withInputCustom(
+                baseSpec(), List.of(new CustomBinding(ResourceLocation.parse("mekanism:gas"), "input_tank")));
+        List<ValidationIssue> issues = SpecValidator.validate(spec, ALL_KNOWN, BLOCK_KNOWN, kind -> false);
+        ValidationIssue issue = findAt(issues, "/inputs/custom/0/kind");
+        assertEquals(ValidationIssue.Severity.ERROR, issue.severity());
+        assertTrue(issue.message().contains("mekanism:gas"));
+        assertTrue(issue.fixHint().contains("supportedKinds"));
+    }
+
+    @Test
+    @DisplayName("Rule 7 PASS: known kind doesn't emit an issue")
+    void knownInputKindPasses() {
+        MachineSpec spec = withInputCustom(
+                baseSpec(), List.of(new CustomBinding(ResourceLocation.parse("mekanism:gas"), "input_tank")));
+        List<ValidationIssue> issues = SpecValidator.validate(spec, ALL_KNOWN, BLOCK_KNOWN, kind -> true);
+        assertNoIssueAt(issues, "/inputs/custom/0/kind");
+    }
+
+    @Test
+    @DisplayName("Rule 7 FAIL: unresolved output custom kind emits ERROR at /outputs/custom/{i}/kind")
+    void unresolvedOutputKindFails() {
+        MachineSpec spec = withOutputCustom(
+                baseSpec(),
+                List.of(
+                        new CustomBinding(ResourceLocation.parse("mekanism:gas"), "out_tank"),
+                        new CustomBinding(ResourceLocation.parse("forestry:products"), "out_products")));
+        // Only "forestry:products" is known
+        List<ValidationIssue> issues = SpecValidator.validate(
+                spec, ALL_KNOWN, BLOCK_KNOWN, kind -> kind.toString().equals("forestry:products"));
+        ValidationIssue badIndex0 = findAt(issues, "/outputs/custom/0/kind");
+        assertEquals(ValidationIssue.Severity.ERROR, badIndex0.severity());
+        assertNoIssueAt(issues, "/outputs/custom/1/kind");
+    }
+
+    @Test
+    @DisplayName("Rule 7 default: omitted custom-kind predicate accepts everything (back-compat)")
+    void defaultPredicateAcceptsEverything() {
+        MachineSpec spec =
+                withInputCustom(baseSpec(), List.of(new CustomBinding(ResourceLocation.parse("anything:foo"), "ref")));
+        // Three-arg overload — no extension predicate provided
+        List<ValidationIssue> issues = SpecValidator.validate(spec, ALL_KNOWN, BLOCK_KNOWN);
+        assertNoIssueAt(issues, "/inputs/custom/0/kind");
+    }
+
+    private static MachineSpec withInputCustom(MachineSpec s, List<CustomBinding> custom) {
+        InputBinding ib = new InputBinding(s.inputs().items(), s.inputs().fluids(), custom);
+        return new MachineSpec(
+                s.version(),
+                s.recipeType(),
+                s.block(),
+                s.blockState(),
+                s.neighbors(),
+                ib,
+                s.outputs(),
+                s.energy(),
+                s.tickBudget(),
+                s.validation(),
+                s.lifecycle());
+    }
+
+    private static MachineSpec withOutputCustom(MachineSpec s, List<CustomBinding> custom) {
+        OutputBinding ob = new OutputBinding(s.outputs().items(), s.outputs().fluids(), custom);
+        return new MachineSpec(
+                s.version(),
+                s.recipeType(),
+                s.block(),
+                s.blockState(),
+                s.neighbors(),
+                s.inputs(),
+                ob,
+                s.energy(),
+                s.tickBudget(),
+                s.validation(),
+                s.lifecycle());
+    }
+
     // ---- builders ----
 
     private static MachineSpec baseSpec() {

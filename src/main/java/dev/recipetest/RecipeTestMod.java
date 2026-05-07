@@ -20,6 +20,7 @@ package dev.recipetest;
 import com.mojang.logging.LogUtils;
 import dev.recipetest.command.RecipeTestCommand;
 import dev.recipetest.compat.forestry.ForestryCarpenterAdapter;
+import dev.recipetest.core.ExtensionRegistry;
 import dev.recipetest.core.HarnessConfig;
 import dev.recipetest.core.HarnessRegistry;
 import dev.recipetest.core.RecipeAdapters;
@@ -68,6 +69,10 @@ public final class RecipeTestMod {
         // returns false from appliesTo() when ICarpenterRecipe isn't on the classpath, so
         // having it in the registry is a no-op when Forestry isn't loaded.
         RecipeAdapters.register(new ForestryCarpenterAdapter());
+        // Discover L2 extensions via ServiceLoader. Idempotent — safe even when common-setup
+        // fires more than once. Must run before SpecLoader's first apply() so unresolved-kind
+        // validation has the full extension set to consult.
+        ExtensionRegistry.instance().scan();
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {
@@ -90,7 +95,8 @@ public final class RecipeTestMod {
                         .registry(Registries.RECIPE_TYPE)
                         .map(reg -> reg.containsKey(rl))
                         .orElse(false),
-                BuiltInRegistries.BLOCK::containsKey));
+                BuiltInRegistries.BLOCK::containsKey,
+                ExtensionRegistry.instance().kindKnownPredicate()));
     }
 
     private void onRegisterCommands(RegisterCommandsEvent event) {
