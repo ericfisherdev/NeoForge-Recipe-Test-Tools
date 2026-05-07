@@ -136,6 +136,34 @@ class DistributionValidatorTest {
     }
 
     @Test
+    void nanToleranceAndNanWeightsAreRejected() {
+        assertAll(
+                () -> assertThrows(
+                        IllegalArgumentException.class,
+                        () -> DistributionValidator.verdict(Map.of(), Map.of(), 10, Double.NaN),
+                        "NaN tolerance must not silently pass the range check"),
+                () -> assertThrows(
+                        IllegalArgumentException.class,
+                        () -> DistributionValidator.verdict(Map.of(), buildWeightMap("a", Double.NaN), 10, 0.05),
+                        "NaN expected weight must not silently pass the range check"));
+    }
+
+    @Test
+    void nullChannelKeysAreRejected() {
+        Map<String, Long> badObserved = new LinkedHashMap<>();
+        badObserved.put(null, 1L);
+        Map<String, Double> badWeights = new LinkedHashMap<>();
+        badWeights.put(null, 0.5);
+        assertAll(
+                () -> assertThrows(
+                        IllegalArgumentException.class,
+                        () -> DistributionValidator.verdict(badObserved, Map.of(), 10, 0.05)),
+                () -> assertThrows(
+                        IllegalArgumentException.class,
+                        () -> DistributionValidator.verdict(Map.of(), badWeights, 10, 0.05)));
+    }
+
+    @Test
     void emptyInputsProduceEmptyPass() {
         DistributionValidator.Result r = DistributionValidator.verdict(Map.of(), Map.of(), 1, 0.05);
         assertTrue(r.pass());

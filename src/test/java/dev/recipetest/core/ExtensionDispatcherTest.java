@@ -175,6 +175,24 @@ class ExtensionDispatcherTest {
     }
 
     @Test
+    void validateOutputNullReturnFallsBackToEmpty() {
+        RecipeTestExtension<Recipe<?>> ext = new RecipeTestExtension<>() {
+            @Override
+            public ResourceLocation recipeType() {
+                return RT;
+            }
+
+            @Override
+            public Optional<TestResult> validateOutput(
+                    dev.recipetest.api.TestContext ctx, RecipeHolder<Recipe<?>> holder, IoSnapshot actual) {
+                return null;
+            }
+        };
+        assertTrue(ExtensionDispatcher.tryValidateOutput(Optional.of(ext), null, null, IoSnapshot.empty())
+                .isEmpty());
+    }
+
+    @Test
     void validateOutputExceptionFallsBackToEmpty() {
         RecipeTestExtension<Recipe<?>> ext = new RecipeTestExtension<>() {
             @Override

@@ -67,16 +67,24 @@ public final class DistributionValidator {
         if (totalSamples < 1) {
             throw new IllegalArgumentException("totalSamples must be >= 1, got " + totalSamples);
         }
-        if (tolerance < 0.0 || tolerance > 1.0) {
+        // Reject NaN explicitly — < / > comparisons silently return false for NaN, so without this
+        // the subsequent range check would treat NaN as in-range and pass invalid input downstream.
+        if (Double.isNaN(tolerance) || tolerance < 0.0 || tolerance > 1.0) {
             throw new IllegalArgumentException("tolerance must be in [0,1], got " + tolerance);
         }
         for (Map.Entry<String, Long> e : observed.entrySet()) {
+            if (e.getKey() == null) {
+                throw new IllegalArgumentException("observed contains a null channel key");
+            }
             if (e.getValue() == null || e.getValue() < 0L) {
                 throw new IllegalArgumentException("observed['" + e.getKey() + "'] must be >= 0, got " + e.getValue());
             }
         }
         for (Map.Entry<String, Double> e : expectedWeights.entrySet()) {
-            if (e.getValue() == null || e.getValue() < 0.0 || e.getValue() > 1.0) {
+            if (e.getKey() == null) {
+                throw new IllegalArgumentException("expectedWeights contains a null channel key");
+            }
+            if (e.getValue() == null || Double.isNaN(e.getValue()) || e.getValue() < 0.0 || e.getValue() > 1.0) {
                 throw new IllegalArgumentException(
                         "expectedWeights['" + e.getKey() + "'] must be in [0,1], got " + e.getValue());
             }
