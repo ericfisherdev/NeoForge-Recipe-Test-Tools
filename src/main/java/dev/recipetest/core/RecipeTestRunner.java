@@ -89,6 +89,12 @@ public final class RecipeTestRunner {
     private final String specSource;
     private final Consumer<TestResult> callback;
 
+    /**
+     * L2 extension for this recipe type, if any. Resolved once at construction so a registry swap
+     * mid-run can't change which extension drives this run. Empty Optional means pure L1 behaviour.
+     */
+    private final java.util.Optional<dev.recipetest.api.RecipeTestExtension<?>> extension;
+
     private Phase phase = Phase.PLACE;
     private int phaseTicks = 0;
     private int recipeTicks = 0;
@@ -117,6 +123,7 @@ public final class RecipeTestRunner {
         this.adapter = Objects.requireNonNull(adapter, "adapter");
         this.specSource = Objects.requireNonNull(specSource, "specSource");
         this.callback = Objects.requireNonNull(callback, "callback");
+        this.extension = ExtensionRegistry.instance().forRecipeType(spec.recipeType());
     }
 
     /** True when the runner has finished all phases and can be removed from the scheduler. */
@@ -180,7 +187,15 @@ public final class RecipeTestRunner {
             }
             case INJECT -> {
                 expected = computeExpected();
-                injectInputs();
+                // Consult the L2 extension first. HANDLED means it took ownership of injection
+                // (typically because the recipe's RecipeInput shape doesn't fit the L1 path);
+                // FALL_THROUGH means run the standard L1 injection on top of whatever (if
+                // anything) the extension did.
+                dev.recipetest.api.RecipeTestExtension.InjectionDecision decision =
+                        ExtensionDispatcher.tryInject(extension, ctx, recipeHolder);
+                if (decision != dev.recipetest.api.RecipeTestExtension.InjectionDecision.HANDLED) {
+                    injectInputs();
+                }
                 phase = Phase.TICK;
                 return true;
             }
@@ -209,7 +224,11 @@ public final class RecipeTestRunner {
                 return false;
             }
             case REPORT -> {
-                safePublish(buildResult());
+                IoSnapshot actualForExtension = lastActual == null ? IoSnapshot.empty() : lastActual;
+                TestResult result = ExtensionDispatcher.tryValidateOutput(
+                                extension, ctx, recipeHolder, actualForExtension)
+                        .orElseGet(this::buildResult);
+                safePublish(result);
                 resultPublished = true;
                 phase = Phase.CLEANUP;
                 return false;
@@ -512,6 +531,13 @@ public final class RecipeTestRunner {
     // ---- helpers ----
 
     private int resolveBudget() {
+        // L2 override wins over the spec value when the extension supplies a positive int —
+        // useful for recipe types that carry processingTime as a recipe field instead of a
+        // spec field (e.g. AbstractCookingRecipe.cookingTime).
+        int override = ExtensionDispatcher.tryTickBudgetOverride(extension, recipeHolder);
+        if (override > 0) {
+            return override;
+        }
         return switch (spec.tickBudget()) {
             case TickBudget.Auto auto -> DEFAULT_AUTO_BUDGET;
             case TickBudget.Fixed fixed -> fixed.ticks();
