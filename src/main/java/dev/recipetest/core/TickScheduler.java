@@ -208,12 +208,27 @@ public final class TickScheduler {
         long tickStart = System.currentTimeMillis();
         long budget = HarnessConfig.BULK_MSPT_BUDGET_MS.get();
 
-        // Drain on cancel: emit any in-flight CANCELLED result, then finalise.
+        // Drain on cancel: emit any in-flight CANCELLED result, then finalise. The cancel-tick
+        // is real work the harness did; track it in totalEngineTicks / peakMspt so the final
+        // BulkResult reflects the actual cost of the cancellation pass and an MSPT spike on
+        // the cancellation tick still surfaces in the WARN log.
         if (run.cancelRequested) {
             if (run.current != null) {
                 run.current.advance();
                 if (run.current.isDone()) {
                     run.current = null;
+                }
+                run.totalEngineTicks++;
+                long cancelElapsed = System.currentTimeMillis() - tickStart;
+                if (cancelElapsed > run.peakMsptBudgetUsedMs) {
+                    run.peakMsptBudgetUsedMs = cancelElapsed;
+                }
+                if (cancelElapsed > budget) {
+                    LOGGER.warn(
+                            "recipe_test bulk: cancel tick exceeded MSPT budget ({} ms > {} ms) for run {}",
+                            cancelElapsed,
+                            budget,
+                            run.runId);
                 }
             }
             finaliseRun(run, true);

@@ -77,9 +77,9 @@ public record BulkProgress(
             }
             countsSum += v;
         }
-        if (countsSum > completed) {
+        if (countsSum != completed) {
             throw new IllegalArgumentException(
-                    "BulkProgress.countsByStatus sum (" + countsSum + ") must not exceed completed=" + completed);
+                    "BulkProgress.countsByStatus sum (" + countsSum + ") must equal completed=" + completed);
         }
         countsByStatus = Map.copyOf(countsByStatus);
     }

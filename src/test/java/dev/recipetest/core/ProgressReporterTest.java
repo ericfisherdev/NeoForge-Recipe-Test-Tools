@@ -22,14 +22,43 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.recipetest.api.BulkProgress;
 import dev.recipetest.api.BulkResult;
+import dev.recipetest.api.Diagnostics;
+import dev.recipetest.api.IoSnapshot;
 import dev.recipetest.api.RunStatus;
+import dev.recipetest.api.TestResult;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class ProgressReporterTest {
+
+    private static final ResourceLocation RECIPE = ResourceLocation.parse("forestry:carpenter/circuit_board_basic");
+    private static final ResourceLocation RECIPE_TYPE = ResourceLocation.parse("forestry:carpenter");
+
+    /** Build dummy {@link TestResult}s matching the supplied counts so {@link BulkResult}'s
+     *  count-vs-results.size invariant is satisfied. */
+    private static List<TestResult> dummyResults(Map<RunStatus, Integer> counts) {
+        List<TestResult> out = new ArrayList<>();
+        for (Map.Entry<RunStatus, Integer> entry : counts.entrySet()) {
+            for (int i = 0; i < entry.getValue(); i++) {
+                out.add(new TestResult(
+                        RECIPE,
+                        RECIPE_TYPE,
+                        "test.json",
+                        entry.getKey(),
+                        1,
+                        IoSnapshot.empty(),
+                        IoSnapshot.empty(),
+                        Optional.empty(),
+                        Diagnostics.empty()));
+            }
+        }
+        return out;
+    }
 
     @Test
     @DisplayName("progressJson is a single line and includes the run id")
@@ -72,7 +101,14 @@ class ProgressReporterTest {
     @DisplayName("resultPretty header changes on cancellation")
     void resultPrettyCancelled() {
         BulkResult result = new BulkResult(
-                "bulk-1", "all", Map.of(RunStatus.CANCELLED, 1, RunStatus.PASS, 2), 100L, 40, 12L, true, List.of());
+                "bulk-1",
+                "all",
+                Map.of(RunStatus.CANCELLED, 1, RunStatus.PASS, 2),
+                100L,
+                40,
+                12L,
+                true,
+                dummyResults(Map.of(RunStatus.CANCELLED, 1, RunStatus.PASS, 2)));
         List<String> lines = ProgressReporter.resultPretty(result);
         assertTrue(lines.get(0).startsWith("BULK CANCELLED"));
     }
@@ -80,7 +116,8 @@ class ProgressReporterTest {
     @Test
     @DisplayName("resultPretty done header on success")
     void resultPrettyDone() {
-        BulkResult result = new BulkResult("bulk-1", "all", Map.of(RunStatus.PASS, 3), 50L, 20, 10L, false, List.of());
+        Map<RunStatus, Integer> counts = Map.of(RunStatus.PASS, 3);
+        BulkResult result = new BulkResult("bulk-1", "all", counts, 50L, 20, 10L, false, dummyResults(counts));
         List<String> lines = ProgressReporter.resultPretty(result);
         assertTrue(lines.get(0).startsWith("BULK DONE"));
         assertTrue(lines.stream().anyMatch(l -> l.contains("wallClock: 50 ms")));
@@ -89,7 +126,8 @@ class ProgressReporterTest {
     @Test
     @DisplayName("resultJson is single-line and round-trippable")
     void resultJsonShape() {
-        BulkResult result = new BulkResult("bulk-1", "all", Map.of(RunStatus.PASS, 1), 5L, 2, 1L, false, List.of());
+        Map<RunStatus, Integer> counts = Map.of(RunStatus.PASS, 1);
+        BulkResult result = new BulkResult("bulk-1", "all", counts, 5L, 2, 1L, false, dummyResults(counts));
         String json = ProgressReporter.resultJson(result);
         assertFalse(json.contains("\n"));
         assertTrue(json.contains("\"runId\":\"bulk-1\""));
