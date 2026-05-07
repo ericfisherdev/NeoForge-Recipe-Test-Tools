@@ -282,7 +282,10 @@ public final class TickScheduler {
     }
 
     private RecipeTestRunner startNextRunner(ActiveRun run) {
-        Job job = run.queue.poll();
+        // Peek before constructing — if RecipeTestRunner's constructor throws, leaving the job
+        // on the queue means the next tick can retry (or, if the failure is permanent, the
+        // queue still reflects the missing recipe so the operator can see it).
+        Job job = run.queue.peekFirst();
         if (job == null) {
             throw new IllegalStateException("startNextRunner called with empty queue");
         }
@@ -291,7 +294,10 @@ public final class TickScheduler {
             run.counts.merge(result.status(), 1, Integer::sum);
             run.completedSinceLastProgress++;
         };
-        return new RecipeTestRunner(job.spec, job.recipe, run.ctx, job.adapter, job.specSource, resultSink);
+        RecipeTestRunner next =
+                new RecipeTestRunner(job.spec, job.recipe, run.ctx, job.adapter, job.specSource, resultSink);
+        run.queue.removeFirst();
+        return next;
     }
 
     private void maybeEmitProgress(ActiveRun run) {
