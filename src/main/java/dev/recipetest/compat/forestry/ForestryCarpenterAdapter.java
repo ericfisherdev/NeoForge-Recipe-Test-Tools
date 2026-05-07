@@ -135,11 +135,11 @@ public final class ForestryCarpenterAdapter implements RecipeAdapter {
 
     @Override
     public ItemStack extractPrimaryOutput(Recipe<?> recipe, HolderLookup.Provider registries) {
-        Recipe<?> grid = unwrapGridRecipe(recipe);
-        if (grid != null) {
-            return grid.getResultItem(registries).copy();
-        }
-        return ItemStack.EMPTY;
+        // ICarpenterRecipe.getResultItem returns the carpenter's own result, which carries any
+        // components (e.g. minecraft:custom_data) attached to the outer recipe. Pulling from the
+        // wrapped grid recipe would drop those — the actual machine output keeps them, so the
+        // expected snapshot must too or the diff fails on a phantom NBT mismatch.
+        return recipe.getResultItem(registries).copy();
     }
 
     private @Nullable Recipe<?> unwrapGridRecipe(Recipe<?> outer) {
