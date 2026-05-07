@@ -79,7 +79,7 @@ Validate locally with:
 
 You should see:
 
-```
+```text
 [recipe_test] registered N dynamic GameTest(s)
 [recipe_test]   recipe_test.yourmod.carpenter.yourmod.recipe_one
 [recipe_test]   recipe_test.yourmod.carpenter.yourmod.recipe_two
