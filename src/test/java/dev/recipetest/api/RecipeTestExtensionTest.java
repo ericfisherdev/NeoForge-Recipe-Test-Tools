@@ -31,6 +31,10 @@ class RecipeTestExtensionTest {
         RecipeTestExtension<Recipe<?>> ext = () -> ResourceLocation.fromNamespaceAndPath("test", "kind");
 
         assertEquals(-1, ext.tickBudgetOverride(null), "default tick budget signals fall-through");
+        assertEquals(
+                RecipeTestExtension.InjectionDecision.FALL_THROUGH,
+                ext.injectInputs(null, null),
+                "default injectInputs signals fall-through");
         assertTrue(ext.supportedKinds().isEmpty(), "no kinds claimed by default");
         assertTrue(ext.weights(null).isEmpty(), "no per-output weights by default");
         assertTrue(

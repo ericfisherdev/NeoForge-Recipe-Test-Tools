@@ -67,17 +67,32 @@ public interface RecipeTestExtension<R extends Recipe<?>> {
     ResourceLocation recipeType();
 
     /**
-     * Override input injection for non-standard {@code RecipeInput} shapes. Default falls
-     * through to the L1 path: the runner uses the spec's {@link InputBinding} and the registered
-     * {@link dev.recipetest.api.MachineSpec spec adapter} to push items / fluids / energy.
+     * Override input injection for non-standard {@code RecipeInput} shapes. Returns an explicit
+     * decision so the runner can tell whether the extension fully handled injection or wants the
+     * harness's L1 path to run as well — matching the explicit-signaling pattern of
+     * {@link #validateOutput} ({@link Optional}) and {@link #tickBudgetOverride} ({@code -1}
+     * sentinel). Default falls through: the runner uses the spec's {@link InputBinding} and the
+     * registered {@link dev.recipetest.api.MachineSpec spec adapter} to push items / fluids /
+     * energy.
      *
      * <p>Implementations that override should call back into the harness via {@code ctx} for any
      * sub-operations they don't want to reimplement (item injection through the regular
-     * {@code IItemHandler}, for example).
+     * {@code IItemHandler}, for example), and return {@link InjectionDecision#HANDLED} to skip
+     * the runner's L1 path or {@link InjectionDecision#FALL_THROUGH} to let it run on top.
      */
-    default void injectInputs(TestContext ctx, RecipeHolder<R> holder) {
-        // Default: signal "fall through to L1". Runner detects the no-op return and proceeds
-        // with its standard injection path.
+    default InjectionDecision injectInputs(TestContext ctx, RecipeHolder<R> holder) {
+        return InjectionDecision.FALL_THROUGH;
+    }
+
+    /**
+     * Outcome of {@link #injectInputs}. Tells the runner whether to skip its L1 injection path
+     * ({@link #HANDLED}) or run it on top of whatever the extension did ({@link #FALL_THROUGH}).
+     */
+    enum InjectionDecision {
+        /** The extension performed full injection itself. The runner must not also run its L1 path. */
+        HANDLED,
+        /** The extension did not perform injection. The runner runs its L1 path as usual. */
+        FALL_THROUGH
     }
 
     /**
