@@ -30,7 +30,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  */
 public final class HarnessConfig {
 
-    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
     /** Per-tick MSPT budget the bulk scheduler may spend advancing runners. */
     public static final ModConfigSpec.IntValue BULK_MSPT_BUDGET_MS = BUILDER.comment(

@@ -68,6 +68,19 @@ public record BulkProgress(
         if (etaTicks < 0) {
             throw new IllegalArgumentException("BulkProgress.etaTicks must be >= 0, got " + etaTicks);
         }
+        int countsSum = 0;
+        for (Map.Entry<RunStatus, Integer> entry : countsByStatus.entrySet()) {
+            int v = entry.getValue();
+            if (v < 0) {
+                throw new IllegalArgumentException(
+                        "BulkProgress.countsByStatus[" + entry.getKey() + "] must be >= 0, got " + v);
+            }
+            countsSum += v;
+        }
+        if (countsSum > completed) {
+            throw new IllegalArgumentException(
+                    "BulkProgress.countsByStatus sum (" + countsSum + ") must not exceed completed=" + completed);
+        }
         countsByStatus = Map.copyOf(countsByStatus);
     }
 
