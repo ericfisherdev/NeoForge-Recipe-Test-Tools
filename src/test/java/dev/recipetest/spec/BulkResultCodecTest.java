@@ -81,6 +81,26 @@ class BulkResultCodecTest {
     @Test
     @DisplayName("BulkResult cancelled flag survives round-trip")
     void resultCancelledRoundTrip() {
+        TestResult passed = new TestResult(
+                RECIPE_ID,
+                RECIPE_TYPE,
+                "forestry:carpenter.json",
+                RunStatus.PASS,
+                10,
+                IoSnapshot.empty(),
+                IoSnapshot.empty(),
+                Optional.empty(),
+                Diagnostics.empty());
+        TestResult cancelled = new TestResult(
+                RECIPE_ID,
+                RECIPE_TYPE,
+                "forestry:carpenter.json",
+                RunStatus.CANCELLED,
+                3,
+                IoSnapshot.empty(),
+                IoSnapshot.empty(),
+                Optional.empty(),
+                Diagnostics.empty());
         BulkResult original = new BulkResult(
                 "bulk-abc12345",
                 "all",
@@ -89,7 +109,7 @@ class BulkResultCodecTest {
                 200,
                 28L,
                 true,
-                List.of());
+                List.of(passed, passed, cancelled));
         BulkResult decoded = roundTrip(BulkResultCodec.RESULT_CODEC, original);
         assertEquals(original, decoded);
         assertTrue(decoded.cancelled());

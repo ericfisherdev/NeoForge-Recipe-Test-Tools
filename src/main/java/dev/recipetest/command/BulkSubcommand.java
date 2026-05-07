@@ -138,6 +138,11 @@ final class BulkSubcommand {
      * Resolve every recipe matching the given specs into {@link TickScheduler.Job}s. Recipes
      * without an applicable {@link RecipeAdapter} are silently skipped — Phase 5's L2 SPI will
      * provide adapters for non-vanilla recipe types.
+     *
+     * <p>Output is sorted by {@code (spec.recipeType, holder.id)} so the deterministic shuffle
+     * has a stable starting point — neither {@code HarnessRegistry.all()} nor
+     * {@code recipeManager.getRecipes()} guarantees iteration order, so without this normalisation
+     * the same runId could produce different shuffled orders on different startups.
      */
     private static List<TickScheduler.Job> collectJobs(ServerLevel level, Collection<MachineSpec> specs) {
         RecipeManager recipeManager = level.getServer().getRecipeManager();
@@ -158,6 +163,9 @@ final class BulkSubcommand {
                 jobs.add(new TickScheduler.Job(spec, holder, adapter.get(), spec.recipeType() + ".json"));
             }
         }
+        jobs.sort(java.util.Comparator.<TickScheduler.Job, String>comparing(
+                        j -> j.spec().recipeType().toString())
+                .thenComparing(j -> j.recipe().id().toString()));
         return jobs;
     }
 
