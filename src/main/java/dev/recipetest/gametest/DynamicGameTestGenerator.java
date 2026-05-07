@@ -223,11 +223,13 @@ public final class DynamicGameTestGenerator {
         RunSessionScheduler.instance().submit(runner);
 
         boolean softFail = isSoftFail();
+        String reporterTestName = TestNaming.testName(ref.recipeType(), ref.recipeId());
         helper.succeedWhen(() -> {
             TestResult r = resultRef.get();
             if (r == null) {
                 throw new GameTestAssertException("recipe-test runner has not finished");
             }
+            JunitXmlReporter.recordResult(reporterTestName, r);
             if (r.status() == RunStatus.PASS) {
                 return;
             }

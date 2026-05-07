@@ -1,0 +1,89 @@
+# Sample GitHub Actions workflow for consumer mods using the recipe_test harness.
+# Drop this file in your consumer mod's `.github/workflows/recipe-tests.yml`.
+#
+# What it does:
+#   - Boots a NeoForge dedicated GameTest server with `runGameTestServer`.
+#   - Discovers every spec at `data/<modid>/recipe_test/machines/*.json` and emits
+#     one dynamic GameTest per matching recipe.
+#   - Uploads `build/gametest/results/recipe-test.xml` as a JUnit-format report.
+#   - Posts a job summary using `dorny/test-reporter` so failed recipes are visible
+#     directly on the PR check page.
+#
+# Tunables (env vars):
+#   RECIPE_TEST_FILTER     Regex applied to test names at registration. Useful for
+#                          incremental runs: `recipe_test\.forestry\.carpenter\..*`
+#                          only registers carpenter tests.
+#   RECIPE_TEST_SOFT_FAIL  When `true`, non-PASS results log a warning instead of
+#                          failing the GameTest. For triage runs where you want to
+#                          see every failure, not just the first.
+#
+# Memory: NeoForge dev runs are memory-hungry. `-Xmx4G` is the default starting point;
+# bump to 6-8 GB if your machine spec includes large neighbour blueprints.
+
+name: Recipe Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: recipe-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  recipe-tests:
+    name: Recipe Tests (NeoForge ${{ matrix.neoforge }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['21']
+        neoforge: ['21.1.213']
+    env:
+      GRADLE_OPTS: -Xmx4G -Dfile.encoding=UTF-8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Setup JDK ${{ matrix.java }}
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Run dynamic recipe tests
+        run: ./gradlew runGameTestServer --no-daemon --stacktrace
+        # Uncomment to scope CI runs to a subset of tests.
+        # env:
+        #   RECIPE_TEST_FILTER: 'recipe_test\.<your_modid>\.'
+
+      - name: Upload JUnit XML
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: recipe-test-results-jdk${{ matrix.java }}
+          path: build/gametest/results/recipe-test.xml
+          if-no-files-found: error
+
+      - name: Publish test report
+        if: always()
+        uses: dorny/test-reporter@v2
+        with:
+          name: Recipe Tests (JDK ${{ matrix.java }})
+          path: build/gametest/results/recipe-test.xml
+          reporter: java-junit
+          fail-on-error: true

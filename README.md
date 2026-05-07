@@ -15,11 +15,21 @@ PR descriptions and release-drafter notes.
 ./gradlew clean build check    # build + tests + spotless + checkstyle + errorprone + nullaway + jacoco
 ./gradlew runClient            # launches Minecraft client with the mod loaded
 ./gradlew runServer            # launches a dedicated server with the mod loaded
+./gradlew runGameTestServer    # boots a GameTest server; runs every dynamic recipe test
 ./gradlew spotlessApply        # auto-fix formatting + license headers
 ```
 
 Coverage report after `./gradlew test`:
 `build/reports/jacoco/test/html/index.html`
+
+JUnit XML report after `./gradlew runGameTestServer`:
+`build/gametest/results/recipe-test.xml`
+
+Consumer mods integrating the harness should start with
+[`docs/consumer-quickstart.md`](docs/consumer-quickstart.md); the matching CI
+workflow template lives at
+[`docs/templates/recipe-tests.yml`](docs/templates/recipe-tests.yml). Tuning options
+and troubleshooting are in [`docs/ci.md`](docs/ci.md).
 
 ## Repo layout
 
