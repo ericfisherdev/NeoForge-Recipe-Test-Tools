@@ -25,6 +25,7 @@ import dev.recipetest.core.HarnessRegistry;
 import dev.recipetest.core.RecipeAdapters;
 import dev.recipetest.core.RunSessionScheduler;
 import dev.recipetest.core.TickScheduler;
+import dev.recipetest.gametest.DynamicGameTestGenerator;
 import dev.recipetest.spec.CapabilityProbe;
 import dev.recipetest.spec.SpecLoader;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -37,6 +38,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import org.slf4j.Logger;
 
@@ -50,6 +52,7 @@ public final class RecipeTestMod {
     public RecipeTestMod(IEventBus modEventBus, ModContainer modContainer) {
         modContainer.registerConfig(ModConfig.Type.SERVER, HarnessConfig.SPEC);
         modEventBus.addListener(this::onCommonSetup);
+        modEventBus.addListener(this::onRegisterGameTests);
         NeoForge.EVENT_BUS.addListener(this::onAddReloadListeners);
         NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
         NeoForge.EVENT_BUS.addListener(this::onServerStarted);
@@ -64,6 +67,15 @@ public final class RecipeTestMod {
         // returns false from appliesTo() when ICarpenterRecipe isn't on the classpath, so
         // having it in the registry is a no-op when Forestry isn't loaded.
         RecipeAdapters.register(new ForestryCarpenterAdapter());
+    }
+
+    private void onRegisterGameTests(RegisterGameTestsEvent event) {
+        // Register the @GameTestGenerator-annotated method on DynamicGameTestGenerator. Vanilla's
+        // GameTestRegistry will invoke the generator and pull in every dynamic recipe test the
+        // datapack scanner discovered.
+        for (var method : DynamicGameTestGenerator.class.getDeclaredMethods()) {
+            event.register(method);
+        }
     }
 
     private void onAddReloadListeners(AddReloadListenerEvent event) {
