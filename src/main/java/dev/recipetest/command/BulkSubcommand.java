@@ -32,7 +32,9 @@ import dev.recipetest.core.TickScheduler;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.function.Consumer;
 import net.minecraft.commands.CommandSourceStack;
@@ -145,21 +147,34 @@ final class BulkSubcommand {
      * the same runId could produce different shuffled orders on different startups.
      */
     private static List<TickScheduler.Job> collectJobs(ServerLevel level, Collection<MachineSpec> specs) {
+        // Single pass over recipeManager.getRecipes() — specs are indexed by recipeType up
+        // front so /recipe_test bulk all doesn't rescan the recipe table once per spec on packs
+        // with many recipe types.
+        Map<ResourceLocation, List<MachineSpec>> specsByType = new HashMap<>();
+        for (MachineSpec spec : specs) {
+            specsByType
+                    .computeIfAbsent(spec.recipeType(), k -> new ArrayList<>())
+                    .add(spec);
+        }
         RecipeManager recipeManager = level.getServer().getRecipeManager();
         List<TickScheduler.Job> jobs = new ArrayList<>();
-        for (MachineSpec spec : specs) {
-            for (RecipeHolder<?> holder : recipeManager.getRecipes()) {
-                ResourceLocation actualType = level.registryAccess()
-                        .registry(Registries.RECIPE_TYPE)
-                        .orElseThrow()
-                        .getKey(holder.value().getType());
-                if (actualType == null || !actualType.equals(spec.recipeType())) {
-                    continue;
-                }
-                java.util.Optional<RecipeAdapter> adapter = RecipeAdapters.findFor(holder.value());
-                if (adapter.isEmpty()) {
-                    continue;
-                }
+        for (RecipeHolder<?> holder : recipeManager.getRecipes()) {
+            ResourceLocation actualType = level.registryAccess()
+                    .registry(Registries.RECIPE_TYPE)
+                    .orElseThrow()
+                    .getKey(holder.value().getType());
+            if (actualType == null) {
+                continue;
+            }
+            List<MachineSpec> matching = specsByType.get(actualType);
+            if (matching == null || matching.isEmpty()) {
+                continue;
+            }
+            java.util.Optional<RecipeAdapter> adapter = RecipeAdapters.findFor(holder.value());
+            if (adapter.isEmpty()) {
+                continue;
+            }
+            for (MachineSpec spec : matching) {
                 jobs.add(new TickScheduler.Job(spec, holder, adapter.get(), spec.recipeType() + ".json"));
             }
         }
