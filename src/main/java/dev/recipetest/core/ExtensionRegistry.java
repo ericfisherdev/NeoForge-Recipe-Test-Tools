@@ -99,15 +99,22 @@ public final class ExtensionRegistry {
                         e.getMessage());
             }
         }
-        snapshot.set(Snapshot.from(discovered));
+        Snapshot published = Snapshot.from(discovered);
+        snapshot.set(published);
         scanned = true;
+        // Log from the published snapshot rather than the raw discovered list so the count
+        // matches what the registry actually serves and the per-entry log doesn't re-invoke
+        // recipeType() on extensions Snapshot.from already rejected for contract violations.
         LOGGER.info(
                 "recipe_test: ExtensionRegistry loaded {} extension(s){}",
-                discovered.size(),
-                discovered.isEmpty() ? "" : ":");
-        for (RecipeTestExtension<?> ext : discovered) {
+                published.byRecipeType().size(),
+                published.byRecipeType().isEmpty() ? "" : ":");
+        for (Map.Entry<ResourceLocation, RecipeTestExtension<?>> entry :
+                published.byRecipeType().entrySet()) {
             LOGGER.info(
-                    "recipe_test:   {} → {}", ext.recipeType(), ext.getClass().getName());
+                    "recipe_test:   {} → {}",
+                    entry.getKey(),
+                    entry.getValue().getClass().getName());
         }
     }
 
