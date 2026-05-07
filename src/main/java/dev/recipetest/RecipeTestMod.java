@@ -26,6 +26,7 @@ import dev.recipetest.core.RecipeAdapters;
 import dev.recipetest.core.RunSessionScheduler;
 import dev.recipetest.core.TickScheduler;
 import dev.recipetest.gametest.DynamicGameTestGenerator;
+import dev.recipetest.gametest.JunitXmlReporter;
 import dev.recipetest.spec.CapabilityProbe;
 import dev.recipetest.spec.SpecLoader;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -70,6 +71,9 @@ public final class RecipeTestMod {
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {
+        // Install the JUnit XML reporter before tests register so it captures every pass/fail.
+        // The install is idempotent — safe even when this event fires twice during dev reloads.
+        JunitXmlReporter.install();
         // Register the @GameTestGenerator-annotated method on DynamicGameTestGenerator. Vanilla's
         // GameTestRegistry will invoke the generator and pull in every dynamic recipe test the
         // datapack scanner discovered.
