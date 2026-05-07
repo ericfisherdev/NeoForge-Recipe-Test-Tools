@@ -19,8 +19,10 @@ package dev.recipetest;
 
 import com.mojang.logging.LogUtils;
 import dev.recipetest.command.RecipeTestCommand;
+import dev.recipetest.compat.forestry.ForestryCarpenterAdapter;
 import dev.recipetest.core.HarnessConfig;
 import dev.recipetest.core.HarnessRegistry;
+import dev.recipetest.core.RecipeAdapters;
 import dev.recipetest.core.RunSessionScheduler;
 import dev.recipetest.core.TickScheduler;
 import dev.recipetest.spec.CapabilityProbe;
@@ -57,6 +59,11 @@ public final class RecipeTestMod {
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
         LOGGER.info("recipe_test: bootstrap ok");
+        // Compat adapters are registered unconditionally — each adapter's static-init guards
+        // itself against the target mod being absent. ForestryCarpenterAdapter, for example,
+        // returns false from appliesTo() when ICarpenterRecipe isn't on the classpath, so
+        // having it in the registry is a no-op when Forestry isn't loaded.
+        RecipeAdapters.register(new ForestryCarpenterAdapter());
     }
 
     private void onAddReloadListeners(AddReloadListenerEvent event) {
