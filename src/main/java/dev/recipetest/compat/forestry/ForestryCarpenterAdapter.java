@@ -71,7 +71,12 @@ public final class ForestryCarpenterAdapter implements RecipeAdapter {
             LOGGER.warn(
                     "recipe_test forestry: ICarpenterRecipe found but expected method missing — adapter inert ({})",
                     ex.getMessage());
+            // Reset every handle so all three statics agree on the inert state — partial
+            // resolution (e.g. getCraftingGridRecipe found but getInputFluid missing) would
+            // otherwise leave method handles dangling next to a null class.
             cls = null;
+            gridMethod = null;
+            fluidMethod = null;
         }
         CARPENTER_CLASS = cls;
         GET_CRAFTING_GRID_RECIPE = gridMethod;

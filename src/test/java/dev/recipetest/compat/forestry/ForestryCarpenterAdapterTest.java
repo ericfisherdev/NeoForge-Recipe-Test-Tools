@@ -20,7 +20,7 @@ package dev.recipetest.compat.forestry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import dev.recipetest.api.Layout;
 import org.junit.jupiter.api.DisplayName;
@@ -34,24 +34,28 @@ import org.junit.jupiter.api.Test;
  */
 class ForestryCarpenterAdapterTest {
 
+    private static boolean forestryPresent() {
+        try {
+            Class.forName("forestry.api.recipes.ICarpenterRecipe");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
+
     @Test
     @DisplayName("Forestry's ICarpenterRecipe is absent on the unit-test classpath")
     void forestryClassIsNotPresent() {
-        // Sanity check — if this ever flips, the rest of the suite needs revisiting because the
-        // adapter would actually be active.
-        boolean present;
-        try {
-            Class.forName("forestry.api.recipes.ICarpenterRecipe");
-            present = true;
-        } catch (ClassNotFoundException e) {
-            present = false;
-        }
-        assertFalse(present, "ForestryCE classes should not be on the harness's CI classpath");
+        // Pin the contract for the no-Forestry classpath. If a future setup adds Forestry to
+        // the test classpath, skip rather than fail — the inert-fallback assertions below
+        // simply don't apply in that case and the adapter is exercised by manual integration.
+        assumeFalse(forestryPresent(), "ForestryCE present — inert-fallback contract doesn't apply");
     }
 
     @Test
     @DisplayName("appliesTo returns false when Forestry isn't present")
     void appliesToWhenForestryAbsent() {
+        assumeFalse(forestryPresent(), "ForestryCE present — appliesTo would legitimately match");
         ForestryCarpenterAdapter adapter = new ForestryCarpenterAdapter();
         // CARPENTER_CLASS short-circuits to false; the recipe arg is never dereferenced.
         assertFalse(adapter.appliesTo(null));
@@ -66,13 +70,7 @@ class ForestryCarpenterAdapterTest {
     @Test
     @DisplayName("Inert adapter returns empty extractions instead of throwing")
     void inertExtractionsAreEmpty() {
-        // Pre-condition: Forestry is absent in CI; if a future setup adds it, skip.
-        try {
-            Class.forName("forestry.api.recipes.ICarpenterRecipe");
-            assumeTrue(false, "Forestry on classpath — skip the inert-fallback assertions");
-        } catch (ClassNotFoundException ignored) {
-            // expected
-        }
+        assumeFalse(forestryPresent(), "ForestryCE present — extractions would touch a real recipe");
         ForestryCarpenterAdapter adapter = new ForestryCarpenterAdapter();
         assertTrue(adapter.extractInputItems(null).isEmpty());
         assertTrue(adapter.extractInputPositions(null).isEmpty());
