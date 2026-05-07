@@ -20,12 +20,14 @@ package dev.recipetest.core;
 import com.mojang.logging.LogUtils;
 import dev.recipetest.api.RecipeTestExtension;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
@@ -80,10 +82,22 @@ public final class ExtensionRegistry {
             LOGGER.debug("recipe_test: ExtensionRegistry already scanned, skipping");
             return;
         }
+        // Use the stream API so a single faulty provider — bad service-file entry, NoClassDefFoundError
+        // on init, exception in a no-arg constructor — only logs a warning instead of aborting
+        // discovery of every later provider in the chain.
         ServiceLoader<RecipeTestExtension> loader = ServiceLoader.load(RecipeTestExtension.class);
         List<RecipeTestExtension<?>> discovered = new java.util.ArrayList<>();
-        for (RecipeTestExtension<?> ext : loader) {
-            discovered.add(ext);
+        for (ServiceLoader.Provider<RecipeTestExtension> provider :
+                (Iterable<ServiceLoader.Provider<RecipeTestExtension>>) loader.stream()::iterator) {
+            try {
+                discovered.add(provider.get());
+            } catch (ServiceConfigurationError | RuntimeException e) {
+                LOGGER.warn(
+                        "recipe_test: skipping RecipeTestExtension provider {} — {}: {}",
+                        provider.type().getName(),
+                        e.getClass().getSimpleName(),
+                        e.getMessage());
+            }
         }
         snapshot.set(Snapshot.from(discovered));
         scanned = true;
@@ -154,7 +168,11 @@ public final class ExtensionRegistry {
         static final Snapshot EMPTY = new Snapshot(Map.of(), Set.of());
 
         Snapshot {
-            byRecipeType = Map.copyOf(byRecipeType);
+            // Map.copyOf produces an unmodifiable Map with unspecified iteration order — using
+            // it here would silently discard the LinkedHashMap registration order this snapshot
+            // is documented to preserve. Wrap a fresh LinkedHashMap copy instead so all() and
+            // byRecipeType iteration mirror ServiceLoader's discovery sequence.
+            byRecipeType = Collections.unmodifiableMap(new LinkedHashMap<>(byRecipeType));
             supportedKinds = Set.copyOf(supportedKinds);
         }
 

@@ -24,6 +24,7 @@ import dev.recipetest.api.MachineSpec;
 import dev.recipetest.api.ValidationPolicy;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 import net.minecraft.resources.ResourceLocation;
@@ -93,6 +94,10 @@ public final class SpecValidator {
             Predicate<ResourceLocation> recipeTypeKnown,
             Predicate<ResourceLocation> blockKnown,
             Predicate<ResourceLocation> customKindKnown) {
+        Objects.requireNonNull(spec, "spec");
+        Objects.requireNonNull(recipeTypeKnown, "recipeTypeKnown");
+        Objects.requireNonNull(blockKnown, "blockKnown");
+        Objects.requireNonNull(customKindKnown, "customKindKnown");
         List<ValidationIssue> issues = new ArrayList<>();
         validateVersion(spec, issues);
         validateRecipeType(spec, recipeTypeKnown, issues);
