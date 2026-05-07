@@ -54,13 +54,17 @@ tests get filtered.
 
 ## Memory tuning
 
-`runGameTestServer` boots a real Minecraft server. The default `4G` heap (`-Xmx4G`)
-fits a few hundred recipes; mods with large neighbour blueprints or many machines
-should bump to `6G`–`8G`:
+`runGameTestServer` boots a real Minecraft server. The game runs in a *forked* JVM
+that NeoGradle launches via `JavaExec`, so `GRADLE_OPTS` (which configures
+Gradle's own JVM) does not propagate to the server. Configure the game heap via
+`jvmArguments` on the `gameTestServer` run in your `build.gradle`:
 
-```yaml
-env:
-  GRADLE_OPTS: -Xmx8G -Dfile.encoding=UTF-8
+```groovy
+runs {
+    gameTestServer {
+        jvmArguments '-Xmx4G'    // bump to '-Xmx8G' for large machine specs
+    }
+}
 ```
 
 If you're seeing OOM failures *during chunk loading* (not during a specific recipe),
