@@ -47,7 +47,10 @@ test summary, GitLab CI, Buildkite Test Analytics) will render it.
 | `RECIPE_TEST_FILTER`   | Regex applied to test names at registration. Filtered-out recipes never appear in the registry. |
 | `RECIPE_TEST_SOFT_FAIL`| `true` demotes any non-PASS run to a logged warning. Use during triage / bisect runs.            |
 
-The filter regex uses `Pattern.find` (substring match), so `recipe_test\.forestry\.carpenter\.` matches all carpenter tests; anchor with `^...$` if you need exact matches. An invalid regex is logged and ignored — no tests get filtered.
+The filter regex uses `Pattern.find` (substring match), so
+`recipe_test\.forestry\.carpenter\.` matches all carpenter tests; anchor with
+`^...$` if you need exact matches. An invalid regex is logged and ignored — no
+tests get filtered.
 
 ## Memory tuning
 
