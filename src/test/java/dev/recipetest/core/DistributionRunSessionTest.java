@@ -186,6 +186,30 @@ class DistributionRunSessionTest {
     }
 
     @Test
+    void synchronousSubmitterDoesNotOverflowStackOnLargeSampleCount() {
+        // Synchronous submitter — without the trampoline, this would recurse 5000 deep and
+        // blow the stack on most JVMs. With the trampoline, the call depth stays constant.
+        WeightedSubmitter submitter = WeightedSubmitter.constant(HONEY, 5000);
+        AtomicReference<DistributionValidator.Result> verdict = new AtomicReference<>();
+
+        DistributionRunSession session = DistributionRunSession.start(
+                FAKE_SPEC,
+                FAKE_HOLDER,
+                FAKE_CTX,
+                FAKE_ADAPTER,
+                "test:centrifuge.json",
+                5000,
+                0.05,
+                Map.of(HONEY.toString(), 1.0),
+                submitter,
+                verdict::set);
+
+        assertTrue(session.isFinished());
+        assertEquals(5000, session.completedSamples());
+        assertTrue(verdict.get().pass());
+    }
+
+    @Test
     void cancelAfterCompletionIsIdempotent() {
         // Run a small session to completion, then call cancel() — should be a no-op rather than
         // re-emitting the verdict.
