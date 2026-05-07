@@ -197,15 +197,20 @@ public final class DistributionRunSession {
             observed.merge(channel, 1L, Long::sum);
         } catch (RuntimeException e) {
             // Defensive — channel extraction is supposed to be infallible, but a malformed
-            // TestResult shouldn't kill the whole session. Log and bucket under the recipe id
-            // so the run still counts toward totalSamples and DistributionValidator gets a
-            // complete histogram.
+            // TestResult shouldn't kill the whole session. Log and bucket under whatever fallback
+            // we can derive without dereferencing the bad result, so the run still counts toward
+            // totalSamples and DistributionValidator gets a complete histogram.
+            String fallback = INVALID_RESULT_CHANNEL;
+            if (result != null && result.recipeId() != null) {
+                fallback = result.recipeId().toString();
+            }
             LOGGER.warn(
-                    "recipe_test: channel extraction failed for sample {}/{} — bucketing under recipeId: {}",
+                    "recipe_test: channel extraction failed for sample {}/{} — bucketing under '{}': {}",
                     completed.get() + 1,
                     totalSamples,
+                    fallback,
                     e.toString());
-            observed.merge(result.recipeId().toString(), 1L, Long::sum);
+            observed.merge(fallback, 1L, Long::sum);
         }
         int n = completed.incrementAndGet();
         if (cancelled.get() || n >= totalSamples) {
@@ -215,18 +220,30 @@ public final class DistributionRunSession {
         }
     }
 
+    /** Bucket key used when a sample's {@link TestResult} is malformed enough that even the
+     *  fallback to {@code recipeId().toString()} would NPE. Surfaces the failure in the
+     *  histogram instead of silently dropping the run. */
+    static final String INVALID_RESULT_CHANNEL = "__invalid_result__";
+
     private void tryFinalise() {
         if (!finished.compareAndSet(false, true)) {
             return;
         }
-        int sampleCount = Math.max(1, completed.get());
+        int sampleCount = completed.get();
         DistributionValidator.Result verdict;
-        try {
-            verdict = DistributionValidator.verdict(
-                    new LinkedHashMap<>(observed), expectedWeights, sampleCount, tolerance);
-        } catch (RuntimeException e) {
-            LOGGER.error("recipe_test: distribution verdict failed — emitting empty result: {}", e.toString());
-            verdict = new DistributionValidator.Result(false, sampleCount, tolerance, java.util.List.of());
+        if (sampleCount == 0) {
+            // No samples landed (cancel or submitter failure on the very first call).
+            // DistributionValidator.verdict requires totalSamples >= 1 — emitting an empty FAIL
+            // result directly is more honest than fabricating a sample to slip past that guard.
+            verdict = new DistributionValidator.Result(false, 0, tolerance, java.util.List.of());
+        } else {
+            try {
+                verdict = DistributionValidator.verdict(
+                        new LinkedHashMap<>(observed), expectedWeights, sampleCount, tolerance);
+            } catch (RuntimeException e) {
+                LOGGER.error("recipe_test: distribution verdict failed — emitting empty result: {}", e.toString());
+                verdict = new DistributionValidator.Result(false, sampleCount, tolerance, java.util.List.of());
+            }
         }
         try {
             done.accept(verdict);
