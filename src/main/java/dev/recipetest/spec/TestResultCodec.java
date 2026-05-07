@@ -40,13 +40,19 @@ public final class TestResultCodec {
 
     private TestResultCodec() {}
 
+    /** Comma-separated list of RunStatus names — derived from the enum so adding a status keeps
+     *  the error message in sync without a manual edit. */
+    private static final String EXPECTED_STATUSES = java.util.Arrays.stream(RunStatus.values())
+            .map(Enum::name)
+            .collect(java.util.stream.Collectors.joining(", "));
+
     public static final Codec<RunStatus> STATUS_CODEC = Codec.STRING.flatXmap(
             name -> {
                 try {
                     return DataResult.success(RunStatus.valueOf(name.toUpperCase(Locale.ROOT)));
                 } catch (IllegalArgumentException ex) {
-                    return DataResult.error(() -> "Unknown status '" + name
-                            + "' (expected one of: PASS, FAIL, TIMEOUT, ERROR, SKIPPED, CANCELLED)");
+                    return DataResult.error(
+                            () -> "Unknown status '" + name + "' (expected one of: " + EXPECTED_STATUSES + ")");
                 }
             },
             status -> DataResult.success(status.name()));

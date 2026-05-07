@@ -132,23 +132,31 @@ public final class TickScheduler {
     }
 
     /**
-     * Submit a bulk run. Returns the assigned {@code runId} (used by {@code /recipe_test cancel}).
-     * Throws {@link IllegalStateException} if another run is already active — Phase 3 enforces
-     * one bulk-in-flight at a time.
+     * Generate a fresh bulk run id. Callers that need a deterministic shuffle seed call this
+     * before {@link #submit} so they can derive the seed from the same id they later pass in.
      */
-    public String submit(
+    public static String newRunId() {
+        return "bulk-" + UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    /**
+     * Submit a bulk run with the given {@code runId}. Throws {@link IllegalStateException} if
+     * another run is already active — Phase 3 enforces one bulk-in-flight at a time.
+     */
+    public void submit(
+            String runId,
             String recipeTypeLabel,
             TestContext ctx,
             List<Job> jobs,
             Consumer<BulkProgress> progressSink,
             Consumer<BulkResult> finalSink) {
+        Objects.requireNonNull(runId, "runId");
         Objects.requireNonNull(recipeTypeLabel, "recipeTypeLabel");
         Objects.requireNonNull(ctx, "ctx");
         Objects.requireNonNull(jobs, "jobs");
         Objects.requireNonNull(progressSink, "progressSink");
         Objects.requireNonNull(finalSink, "finalSink");
 
-        String runId = "bulk-" + UUID.randomUUID().toString().substring(0, 8);
         Deque<Job> queue = new ArrayDeque<>(jobs);
         ActiveRun run = new ActiveRun(runId, recipeTypeLabel, ctx, queue, jobs.size(), progressSink, finalSink);
         if (!active.compareAndSet(null, run)) {
@@ -156,7 +164,6 @@ public final class TickScheduler {
             String existingId = existing == null ? "<unknown>" : existing.runId;
             throw new IllegalStateException("another bulk run is already active (runId=" + existingId + ")");
         }
-        return runId;
     }
 
     /**
@@ -242,6 +249,14 @@ public final class TickScheduler {
                     elapsed,
                     budget,
                     run.runId);
+        }
+
+        // Finalise on the same tick the last runner completes; otherwise a /recipe_test cancel
+        // arriving in the gap between the last completion and the next tick would mislabel the
+        // already-finished run as cancelled.
+        if (run.current == null && run.queue.isEmpty()) {
+            finaliseRun(run, false);
+            return;
         }
 
         maybeEmitProgress(run);

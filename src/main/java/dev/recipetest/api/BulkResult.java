@@ -70,6 +70,13 @@ public record BulkResult(
             throw new IllegalArgumentException(
                     "BulkResult.peakMsptBudgetUsedMs must be >= 0, got " + peakMsptBudgetUsedMs);
         }
+        for (Map.Entry<RunStatus, Integer> entry : countsByStatus.entrySet()) {
+            int v = entry.getValue();
+            if (v < 0) {
+                throw new IllegalArgumentException(
+                        "BulkResult.countsByStatus[" + entry.getKey() + "] must be >= 0, got " + v);
+            }
+        }
         countsByStatus = Map.copyOf(countsByStatus);
         results = List.copyOf(results);
     }

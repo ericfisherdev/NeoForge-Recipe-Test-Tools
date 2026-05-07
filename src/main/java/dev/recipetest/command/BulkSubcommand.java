@@ -75,7 +75,7 @@ final class BulkSubcommand {
             ctx.getSource().sendFailure(Component.literal("no recipes found for " + recipeType));
             return 0;
         }
-        return submit(ctx.getSource(), recipeType.toString(), level, jobs, /* shuffleSeed */ null);
+        return submit(ctx.getSource(), recipeType.toString(), level, jobs, /* shuffle */ false);
     }
 
     /** {@code /recipe_test bulk all} — every recipe across every registered spec. */
@@ -91,10 +91,12 @@ final class BulkSubcommand {
             ctx.getSource().sendFailure(Component.literal("no recipes found across registered specs"));
             return 0;
         }
-        // Deterministic shuffle keyed on the run id avoids systematic bias toward early specs
-        // if the run is interrupted; aggregate counts remain identical between two consecutive
-        // bulk-all runs because the same set of jobs is processed regardless of order.
-        return submit(ctx.getSource(), "all", level, jobs, /* shuffleSeed */ Long.valueOf(System.nanoTime()));
+        // Deterministic shuffle (seed = runId.hashCode()) avoids systematic bias toward early
+        // specs if the run is interrupted; aggregate counts remain identical between two
+        // consecutive bulk-all runs because the same set of jobs is processed regardless of
+        // order. Recording the runId in the BulkResult means a future replay against the same
+        // id reproduces the order exactly.
+        return submit(ctx.getSource(), "all", level, jobs, /* shuffle */ true);
     }
 
     private static int submit(
@@ -102,13 +104,14 @@ final class BulkSubcommand {
             String recipeTypeLabel,
             ServerLevel level,
             List<TickScheduler.Job> jobs,
-            java.lang.@org.jetbrains.annotations.Nullable Long shuffleSeed)
+            boolean shuffle)
             throws CommandSyntaxException {
         if (TickScheduler.instance().activeRunId().isPresent()) {
             throw ALREADY_RUNNING.create();
         }
-        if (shuffleSeed != null) {
-            Collections.shuffle(jobs, new Random(shuffleSeed));
+        String runId = TickScheduler.newRunId();
+        if (shuffle) {
+            Collections.shuffle(jobs, new Random(runId.hashCode()));
         }
         TestContext testContext = new TestContext(level.getServer(), level, BULK_ORIGIN, level.registryAccess());
 
@@ -124,9 +127,10 @@ final class BulkSubcommand {
                     }
                 };
 
-        String runId = TickScheduler.instance().submit(recipeTypeLabel, testContext, jobs, progressSink, finalSink);
+        TickScheduler.instance().submit(runId, recipeTypeLabel, testContext, jobs, progressSink, finalSink);
+        int jobCount = jobs.size();
         source.sendSuccess(
-                () -> Component.literal("Scheduled bulk run " + runId + " (" + jobs.size() + " recipes)"), false);
+                () -> Component.literal("Scheduled bulk run " + runId + " (" + jobCount + " recipes)"), false);
         return 1;
     }
 
