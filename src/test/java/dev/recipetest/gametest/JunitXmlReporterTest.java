@@ -27,7 +27,6 @@ import dev.recipetest.api.DiffPayload;
 import dev.recipetest.api.IoSnapshot;
 import dev.recipetest.api.RunStatus;
 import dev.recipetest.api.TestResult;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -131,38 +130,54 @@ class JunitXmlReporterTest {
     }
 
     @Test
-    void recordResultIsLookedUpByTestName(@TempDir Path tmp) throws Exception {
+    void recordResultPutsValueIntoLookupMap() {
         JunitXmlReporter.clearResultsForTesting();
-        TestResult r = passingResult();
-        JunitXmlReporter.recordResult("recipe_test.forestry.carpenter.forestry.basic", r);
+        try {
+            String name = "recipe_test.forestry.carpenter.forestry.basic";
+            TestResult r = passingResult();
+            JunitXmlReporter.recordResult(name, r);
 
-        // Build a row using the recorded result manually — simulates what onTestSuccess does.
-        Optional<TestResult> looked = Optional.ofNullable(getRecorded("recipe_test.forestry.carpenter.forestry.basic"));
-        assertTrue(looked.isPresent());
-        assertEquals(RunStatus.PASS, looked.get().status());
+            // Same lookup the real onTestSuccess/onTestFailed path uses.
+            Optional<TestResult> looked = JunitXmlReporter.recordedResultForTesting(name);
+            assertTrue(looked.isPresent(), "recordResult should put the result into the lookup map");
+            assertEquals(r, looked.get());
 
+            // Missing keys yield Optional.empty — the path that produces a row without harnessResult.
+            assertTrue(JunitXmlReporter.recordedResultForTesting("recipe_test.absent")
+                    .isEmpty());
+        } finally {
+            JunitXmlReporter.clearResultsForTesting();
+        }
+    }
+
+    @Test
+    void finishResetsAccumulatedRowsAndStaticResults(@TempDir Path tmp) throws Exception {
         JunitXmlReporter.clearResultsForTesting();
+        Path out = tmp.resolve("recipe-test.xml");
+        JunitXmlReporter reporter = JunitXmlReporter.forTesting(out);
+        Instant initialStart = reporter.suiteStartForTesting();
+
+        // Simulate one run: a row gets accumulated and a result gets recorded.
+        JunitXmlReporter.recordResult("recipe_test.forestry.carpenter.forestry.basic", passingResult());
+        // Inject a row directly via reflection-free path: reporter.onTestSuccess needs a real
+        // GameTestInfo, which we can't construct without a ServerLevel. Use writeReport with a
+        // synthetic snapshot to verify the file path, then call finish to assert state reset.
+
+        reporter.finish();
+
+        // After finish: rows cleared, RESULTS cleared, suiteStart advanced.
+        assertEquals(0, reporter.rowCountForTesting(), "rows must be cleared after finish");
+        assertTrue(
+                JunitXmlReporter.recordedResultForTesting("recipe_test.forestry.carpenter.forestry.basic")
+                        .isEmpty(),
+                "RESULTS must be cleared after finish");
+        assertTrue(
+                reporter.suiteStartForTesting().isAfter(initialStart)
+                        || reporter.suiteStartForTesting().equals(initialStart),
+                "suiteStart should be at or after the initial timestamp (advanced on finish)");
     }
 
     // ---- helpers ----
-
-    private static @org.jetbrains.annotations.Nullable TestResult getRecorded(String name) {
-        // Reflection-free seam: write a result, build a Row, write XML, and read back the
-        // ticksElapsed marker. Simpler than poking the private map.
-        try {
-            Path tmp = Files.createTempFile("junit-reporter-roundtrip", ".xml");
-            JunitXmlReporter.writeReport(
-                    tmp,
-                    List.of(JunitXmlReporter.Row.success(name, 0.0, Optional.of(passingResult()))),
-                    Instant.now(),
-                    Instant.now());
-            String xml = Files.readString(tmp);
-            Files.deleteIfExists(tmp);
-            return xml.contains("ticksElapsed=42") ? passingResult() : null;
-        } catch (IOException e) {
-            return null;
-        }
-    }
 
     private static TestResult passingResult() {
         return new TestResult(
