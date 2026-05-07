@@ -121,6 +121,71 @@ class DistributionRunSessionTest {
     }
 
     @Test
+    void zeroCompletedSamplesEmitsEmptyFailResult() {
+        // Submitter throws on its very first call → no samples land.
+        WeightedSubmitter submitter = WeightedSubmitter.failOnSubmit(HONEY, 1);
+        AtomicReference<DistributionValidator.Result> verdict = new AtomicReference<>();
+
+        DistributionRunSession session = DistributionRunSession.start(
+                FAKE_SPEC,
+                FAKE_HOLDER,
+                FAKE_CTX,
+                FAKE_ADAPTER,
+                "test:centrifuge.json",
+                10,
+                0.05,
+                Map.of(HONEY.toString(), 1.0),
+                submitter,
+                verdict::set);
+
+        assertTrue(session.isFinished());
+        assertEquals(0, session.completedSamples());
+        assertNotNull(verdict.get());
+        // Zero samples must produce a FAIL — fabricating a sample to slip past the verdict's
+        // totalSamples >= 1 guard would distort the verdict's reported sample count.
+        assertFalse(verdict.get().pass());
+        assertEquals(0, verdict.get().totalSamples());
+        assertTrue(verdict.get().channels().isEmpty());
+    }
+
+    @Test
+    void invalidTestResultBucketsUnderFallbackChannel() {
+        // Submitter returns a TestResult that null-trips channel extraction. The session's
+        // catch path should still bucket the run somewhere instead of dropping it.
+        DistributionRunSession.RunnerSubmitter submitter = (spec, holder, ctx, adapter, source, callback) -> {
+            // ChannelExtractor.channelOf rejects null with NPE; bucket falls back to recipeId
+            // — but here we simulate a result where even recipeId is null by throwing from the
+            // synthetic submitter via a custom TestResult subclass... easier: make a normal
+            // result and throw from a forced extractor failure.
+            // Cheat: pass null result so channelOf NPEs, exercising the fallback path.
+            callback.accept(null);
+        };
+        AtomicReference<DistributionValidator.Result> verdict = new AtomicReference<>();
+
+        DistributionRunSession session = DistributionRunSession.start(
+                FAKE_SPEC,
+                FAKE_HOLDER,
+                FAKE_CTX,
+                FAKE_ADAPTER,
+                "test:centrifuge.json",
+                3,
+                0.05,
+                Map.of(HONEY.toString(), 1.0),
+                submitter,
+                verdict::set);
+
+        assertTrue(session.isFinished());
+        assertEquals(3, session.completedSamples());
+        assertNotNull(verdict.get());
+        // Three runs all bucketed under the invalid-result channel.
+        assertTrue(
+                verdict.get().channels().stream()
+                        .anyMatch(c -> c.channel().equals(DistributionRunSession.INVALID_RESULT_CHANNEL)
+                                && c.observedCount() == 3),
+                "fallback channel should carry all three sample observations");
+    }
+
+    @Test
     void cancelAfterCompletionIsIdempotent() {
         // Run a small session to completion, then call cancel() — should be a no-op rather than
         // re-emitting the verdict.
