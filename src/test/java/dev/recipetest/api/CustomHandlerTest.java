@@ -52,10 +52,13 @@ class CustomHandlerTest {
         ResourceLocation kind = ResourceLocation.fromNamespaceAndPath("mekanism", "gas");
         CustomHandler.Snapshot a = new CustomHandler.Snapshot(kind, "hydrogen:1000");
         CustomHandler.Snapshot b = new CustomHandler.Snapshot(kind, "hydrogen:1000");
-        CustomHandler.Snapshot c = new CustomHandler.Snapshot(kind, "hydrogen:500");
+        CustomHandler.Snapshot differentPayload = new CustomHandler.Snapshot(kind, "hydrogen:500");
+        CustomHandler.Snapshot differentKind = new CustomHandler.Snapshot(
+                ResourceLocation.fromNamespaceAndPath("mekanism", "slurry"), "hydrogen:1000");
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());
-        assertNotEquals(a, c);
+        assertNotEquals(a, differentPayload, "payload differs → not equal");
+        assertNotEquals(a, differentKind, "kind differs → not equal even when payload matches");
     }
 
     @Test

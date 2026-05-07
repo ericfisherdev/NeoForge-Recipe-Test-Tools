@@ -118,6 +118,62 @@ class ExtensionRegistryTest {
     }
 
     @Test
+    void contractViolatingExtensionIsSkippedNotFatal() {
+        ResourceLocation goodRt = ResourceLocation.fromNamespaceAndPath("good", "rt");
+        RecipeTestExtension<Recipe<?>> good = () -> goodRt;
+        RecipeTestExtension<Recipe<?>> nullRecipeType = () -> null; // violates non-null contract
+        RecipeTestExtension<Recipe<?>> throwingRecipeType = new RecipeTestExtension<>() {
+            @Override
+            public ResourceLocation recipeType() {
+                throw new IllegalStateException("synthetic failure");
+            }
+        };
+        RecipeTestExtension<Recipe<?>> nullSupportedKinds = new RecipeTestExtension<>() {
+            @Override
+            public ResourceLocation recipeType() {
+                return ResourceLocation.fromNamespaceAndPath("nullkinds", "rt");
+            }
+
+            @Override
+            public Set<ResourceLocation> supportedKinds() {
+                return null;
+            }
+        };
+
+        ExtensionRegistry.instance()
+                .replaceForTesting(List.of(nullRecipeType, throwingRecipeType, nullSupportedKinds, good));
+
+        // Bad extensions are skipped; the well-behaved one still surfaces.
+        assertEquals(1, ExtensionRegistry.instance().all().size());
+        assertSame(good, ExtensionRegistry.instance().forRecipeType(goodRt).orElseThrow());
+    }
+
+    @Test
+    void nullSupportedKindElementIsSkipped() {
+        ResourceLocation goodKind = ResourceLocation.fromNamespaceAndPath("k", "ok");
+        Set<ResourceLocation> mixed = new java.util.LinkedHashSet<>();
+        mixed.add(goodKind);
+        mixed.add(null);
+
+        RecipeTestExtension<Recipe<?>> ext = new RecipeTestExtension<>() {
+            @Override
+            public ResourceLocation recipeType() {
+                return ResourceLocation.fromNamespaceAndPath("e", "rt");
+            }
+
+            @Override
+            public Set<ResourceLocation> supportedKinds() {
+                return mixed;
+            }
+        };
+
+        ExtensionRegistry.instance().replaceForTesting(List.of(ext));
+        assertTrue(ExtensionRegistry.instance().isKindSupported(goodKind));
+        // The null entry was logged-and-skipped, not propagated to the supportedKinds set.
+        assertFalse(ExtensionRegistry.instance().isKindSupported(ResourceLocation.fromNamespaceAndPath("z", "z")));
+    }
+
+    @Test
     void kindKnownPredicateReflectsRegistryState() {
         var predicate = ExtensionRegistry.instance().kindKnownPredicate();
         ResourceLocation kind = ResourceLocation.fromNamespaceAndPath("mekanism", "gas");

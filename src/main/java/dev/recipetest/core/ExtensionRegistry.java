@@ -180,8 +180,24 @@ public final class ExtensionRegistry {
             Map<ResourceLocation, RecipeTestExtension<?>> byType = new LinkedHashMap<>();
             Set<ResourceLocation> kinds = new HashSet<>();
             for (RecipeTestExtension<?> ext : extensions) {
-                ResourceLocation rt =
-                        Objects.requireNonNull(ext.recipeType(), "RecipeTestExtension.recipeType() must not be null");
+                ResourceLocation rt;
+                Set<ResourceLocation> supported;
+                // Isolate each extension so a contract-violating recipeType() / supportedKinds()
+                // (null return, runtime exception) only skips the offending extension and logs a
+                // warning, instead of aborting the whole scan and taking down every well-behaved
+                // sibling with it. ServiceLoader.scan already isolates provider.get(); this guards
+                // the post-construction hooks Snapshot.from invokes.
+                try {
+                    rt = Objects.requireNonNull(ext.recipeType(), "RecipeTestExtension.recipeType() must not be null");
+                    supported = Objects.requireNonNull(
+                            ext.supportedKinds(), "RecipeTestExtension.supportedKinds() must not be null");
+                } catch (RuntimeException e) {
+                    LOGGER.warn(
+                            "recipe_test: invalid RecipeTestExtension {} — skipping: {}",
+                            ext.getClass().getName(),
+                            e.getMessage());
+                    continue;
+                }
                 if (byType.containsKey(rt)) {
                     LOGGER.warn(
                             "recipe_test: duplicate RecipeTestExtension for {} — keeping first ({}); ignoring {}",
@@ -191,7 +207,15 @@ public final class ExtensionRegistry {
                     continue;
                 }
                 byType.put(rt, ext);
-                kinds.addAll(ext.supportedKinds());
+                for (ResourceLocation kind : supported) {
+                    if (kind == null) {
+                        LOGGER.warn(
+                                "recipe_test: extension {} returned null in supportedKinds(); ignoring entry",
+                                ext.getClass().getName());
+                        continue;
+                    }
+                    kinds.add(kind);
+                }
             }
             return new Snapshot(byType, kinds);
         }
