@@ -319,17 +319,28 @@ public final class TickScheduler {
     }
 
     private void finaliseRun(ActiveRun run, boolean cancelled) {
-        long wallClockMs = System.currentTimeMillis() - run.startMillis;
-        BulkResult result = new BulkResult(
-                run.runId,
-                run.recipeTypeLabel,
-                Map.copyOf(run.counts),
-                wallClockMs,
-                run.totalEngineTicks,
-                run.peakMsptBudgetUsedMs,
-                cancelled,
-                List.copyOf(run.results));
+        // Clear active first — if BulkResult's constructor throws (e.g. an unexpected invariant
+        // violation), the scheduler must still be willing to accept new runs rather than stay
+        // stuck on a dangling ActiveRun nobody can clear.
         active.set(null);
+        // Clamp wallClockMs to >= 0 so a backward currentTimeMillis jump (NTP / manual clock
+        // change) can't produce a negative value that the constructor would reject.
+        long wallClockMs = Math.max(0L, System.currentTimeMillis() - run.startMillis);
+        BulkResult result;
+        try {
+            result = new BulkResult(
+                    run.runId,
+                    run.recipeTypeLabel,
+                    Map.copyOf(run.counts),
+                    wallClockMs,
+                    run.totalEngineTicks,
+                    run.peakMsptBudgetUsedMs,
+                    cancelled,
+                    List.copyOf(run.results));
+        } catch (RuntimeException ex) {
+            LOGGER.warn("recipe_test bulk: result construction threw for run {} — {}", run.runId, ex.toString());
+            return;
+        }
         try {
             run.finalSink.accept(result);
         } catch (RuntimeException ex) {
