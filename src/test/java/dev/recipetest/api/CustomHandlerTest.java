@@ -42,6 +42,7 @@ class CustomHandlerTest {
 
     @Test
     void refusedRejectsBlankReason() {
+        assertThrows(NullPointerException.class, () -> CustomHandler.InjectResult.refused(null));
         assertThrows(IllegalArgumentException.class, () -> CustomHandler.InjectResult.refused(""));
         assertThrows(IllegalArgumentException.class, () -> CustomHandler.InjectResult.refused("   "));
     }
