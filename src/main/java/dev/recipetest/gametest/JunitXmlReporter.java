@@ -148,15 +148,23 @@ public final class JunitXmlReporter implements TestReporter {
     public void onTestFailed(GameTestInfo testInfo) {
         String name = testInfo.getTestName();
         Throwable error = testInfo.getError();
-        rows.add(Row.failure(
-                name, runtimeSeconds(testInfo), describeError(error), Optional.ofNullable(RESULTS.get(name))));
+        Row row = Row.failure(
+                name, runtimeSeconds(testInfo), describeError(error), Optional.ofNullable(RESULTS.get(name)));
+        // Same monitor as finish()'s snapshot/clear block — without it, a JVM shutdown hook
+        // racing a tick callback could see ArrayList mid-resize.
+        synchronized (rows) {
+            rows.add(row);
+        }
         delegate.onTestFailed(testInfo);
     }
 
     @Override
     public void onTestSuccess(GameTestInfo testInfo) {
         String name = testInfo.getTestName();
-        rows.add(Row.success(name, runtimeSeconds(testInfo), Optional.ofNullable(RESULTS.get(name))));
+        Row row = Row.success(name, runtimeSeconds(testInfo), Optional.ofNullable(RESULTS.get(name)));
+        synchronized (rows) {
+            rows.add(row);
+        }
         delegate.onTestSuccess(testInfo);
     }
 

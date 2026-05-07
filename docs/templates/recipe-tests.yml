@@ -73,6 +73,13 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
+        with:
+          # Opt into the MIT-licensed cache provider. The default Enhanced Caching
+          # in v6 is distributed under Gradle's Terms of Use; `basic` is fully
+          # @actions/cache. Drop this `with:` block if your repo prefers Enhanced
+          # Caching (free for public repos, in Free Preview for private repos as
+          # of 2026-03).
+          cache-provider: basic
 
       - name: Run dynamic recipe tests
         run: ./gradlew runGameTestServer --no-daemon --stacktrace
