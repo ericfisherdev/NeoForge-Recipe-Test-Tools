@@ -24,11 +24,19 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import net.minecraft.world.item.crafting.Recipe;
 
 /**
- * Process-wide registry of {@link RecipeAdapter}s. Built-ins for vanilla shaped + shapeless are
- * registered eagerly; mods adding L2 adapters in Phase 5 will use {@link #register(RecipeAdapter)}.
+ * Process-wide registry of {@link RecipeAdapter}s. Built-ins for vanilla shaped, vanilla
+ * shapeless, and a generic last-resort fallback are registered eagerly; mods adding L2 adapters
+ * via the {@link dev.recipetest.api.RecipeTestExtension} SPI bypass adapter selection entirely
+ * by returning {@link dev.recipetest.api.RecipeTestExtension.InjectionDecision#HANDLED} from
+ * {@code injectInputs} — the harness only ships generic adapters; mod-specific extraction lives
+ * in consumer mods.
  *
- * <p>Lookup order is registration order — built-ins are registered first, so subclass-specific
- * adapters added later take precedence over the catch-all {@link VanillaShapelessAdapter}.
+ * <p>Lookup order is registration order. {@link VanillaShapedAdapter} matches first for shaped
+ * recipes; {@link VanillaShapelessAdapter} matches anything with non-empty
+ * {@link Recipe#getIngredients()}; {@link GenericRecipeAdapter} catches everything else as a
+ * last resort. Mods that need recipe-class-specific input/output extraction implement
+ * {@link dev.recipetest.api.RecipeTestExtension} on the consumer-mod side rather than registering
+ * an adapter here.
  */
 public final class RecipeAdapters {
 
@@ -37,6 +45,7 @@ public final class RecipeAdapters {
     static {
         ADAPTERS.add(new VanillaShapedAdapter());
         ADAPTERS.add(new VanillaShapelessAdapter());
+        ADAPTERS.add(new GenericRecipeAdapter());
     }
 
     private RecipeAdapters() {}
