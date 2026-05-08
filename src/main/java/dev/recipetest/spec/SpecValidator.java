@@ -62,7 +62,7 @@ import net.minecraft.resources.ResourceLocation;
  */
 public final class SpecValidator {
 
-    /** Current schema version the harness understands. */
+    /** Current schema version the kit understands. */
     public static final int SUPPORTED_VERSION = 1;
 
     private SpecValidator() {}

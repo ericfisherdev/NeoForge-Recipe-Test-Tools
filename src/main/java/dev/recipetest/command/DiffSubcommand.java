@@ -39,7 +39,7 @@ import net.minecraft.world.item.crafting.RecipeManager;
 /**
  * {@code /recipe_test diff <recipeType> <recipeId>} — runs the recipe once and prints a
  * side-by-side expected/actual table. Distinct from {@code /recipe_test run} only in the way the
- * result is rendered — the actual harness work is identical.
+ * result is rendered — the actual kit work is identical.
  */
 final class DiffSubcommand {
 

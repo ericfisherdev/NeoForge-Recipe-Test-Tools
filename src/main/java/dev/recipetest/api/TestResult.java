@@ -22,7 +22,7 @@ import java.util.Optional;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * Result of running a single recipe through the harness. Serialised to JSON exactly as documented
+ * Result of running a single recipe through the kit. Serialised to JSON exactly as documented
  * in {@code json-spec.md#TestResult Output Schema}.
  *
  * <p>Invariants:

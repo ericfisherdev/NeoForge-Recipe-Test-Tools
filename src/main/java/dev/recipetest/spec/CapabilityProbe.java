@@ -24,7 +24,7 @@ import dev.recipetest.api.ItemBinding;
 import dev.recipetest.api.MachineSpec;
 import dev.recipetest.api.Side;
 import dev.recipetest.core.CapabilityDriver;
-import dev.recipetest.core.HarnessRegistry;
+import dev.recipetest.core.KitRegistry;
 import dev.recipetest.gametest.TestStructures;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -74,12 +74,12 @@ public final class CapabilityProbe {
     }
 
     /**
-     * Run the probe against every spec in {@link HarnessRegistry}. Best-effort — any per-spec
+     * Run the probe against every spec in {@link KitRegistry}. Best-effort — any per-spec
      * exception is caught and logged; the probe never aborts the server start.
      */
     public static void probeAll(ServerLevel level) {
         clear();
-        var specs = HarnessRegistry.instance().all();
+        var specs = KitRegistry.instance().all();
         if (specs.isEmpty()) {
             return;
         }

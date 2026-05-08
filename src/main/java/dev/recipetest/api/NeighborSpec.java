@@ -22,7 +22,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * A block to place at a given offset relative to the machine origin during harness setup.
+ * A block to place at a given offset relative to the machine origin during kit setup.
  *
  * @param offset relative position from the machine origin (machine sits at {@code [0,0,0]})
  * @param block the block to place

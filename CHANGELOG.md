@@ -20,7 +20,15 @@ Targets Minecraft 1.21.1 / NeoForge 21.1.213 / Java 21 throughout.
 ### Changed
 
 - README rewritten consumer-first: pitch + spec example up top, dev commands moved below, dedicated Documentation section.
-- Bug-report issue template clarifies "this is for harness bugs, not spec-help."
+- Bug-report issue template clarifies "this is for kit bugs, not spec-help."
+- Renamed user-facing branding from "Recipe Test Harness" to "NeoForge Recipe Test Kit"
+  across mod_name, POM `name`, README, schema description, issue templates,
+  `docs/*.md`, `pack.mcmeta`, and the L2 SPI / runner javadoc.
+- **Breaking (pre-v1):** Renamed code identifiers to match the new branding:
+  `HarnessConfig` → `KitConfig`, `HarnessRegistry` → `KitRegistry`. Imports and
+  references updated across the codebase. The `recipe_test` mod ID is unchanged
+  (it's a registry namespace, not a display name; renaming would invalidate every
+  existing spec datapack at `data/<modid>/recipe_test/machines/`).
 
 ## [1.0.0] — TBD
 

@@ -24,7 +24,7 @@ import dev.recipetest.api.RunStatus;
 import dev.recipetest.api.TestContext;
 import dev.recipetest.api.TestResult;
 import dev.recipetest.api.TickBudget;
-import dev.recipetest.core.HarnessRegistry;
+import dev.recipetest.core.KitRegistry;
 import dev.recipetest.core.RecipeAdapter;
 import dev.recipetest.core.RecipeAdapters;
 import dev.recipetest.core.RecipeTestRunner;
@@ -69,7 +69,7 @@ import org.slf4j.Logger;
  * time the server has loaded datapacks), constructs a {@link RecipeTestRunner}, submits it to the
  * existing {@link RunSessionScheduler}, and uses {@link GameTestHelper#succeedWhen} to wait for
  * the runner to publish a {@link TestResult}. PASS marks the test passed; non-PASS throws a
- * {@link GameTestAssertException} carrying the diff/diagnostics so the harness's failure data
+ * {@link GameTestAssertException} carrying the diff/diagnostics so the kit's failure data
  * surfaces in test reports.
  *
  * <p>The class is annotated {@link GameTestHolder} with {@code "recipe_test"} so NeoForge's
@@ -84,13 +84,13 @@ public final class DynamicGameTestGenerator {
 
     /**
      * Structure shipped at {@code data/recipe_test/structure/empty5.nbt}. Every dynamic test
-     * loads the same template — the harness places the machine itself inside the empty region.
+     * loads the same template — the kit places the machine itself inside the empty region.
      */
     private static final String STRUCTURE_NAME = RecipeTestMod.MODID + ":empty5";
 
     /**
      * Default batch — TestFunction's {@code batchName} groups tests for parallel/serial scheduling
-     * inside the GameTest framework. Single batch keeps execution serial, which the harness
+     * inside the GameTest framework. Single batch keeps execution serial, which the kit
      * relies on (only one {@link RecipeTestRunner} should hold the test region at a time).
      */
     private static final String BATCH = "recipe_test_dynamic";
@@ -153,7 +153,7 @@ public final class DynamicGameTestGenerator {
 
     private static TestFunction buildFunction(DatapackScanner.RecipeRef ref, String testName) {
         Consumer<GameTestHelper> body = helper -> runOne(helper, ref);
-        // Timeout: spec budget is unknown at registration time (HarnessRegistry not populated
+        // Timeout: spec budget is unknown at registration time (KitRegistry not populated
         // yet), so use the conservative auto-budget cap plus buffer. Tests whose actual recipe
         // budget exceeds this will TIMEOUT here even if the runner would have passed — accepted
         // tradeoff for v1; CI docs flag this as a tuning knob.
@@ -182,7 +182,7 @@ public final class DynamicGameTestGenerator {
             return;
         }
 
-        Optional<MachineSpec> specOpt = HarnessRegistry.instance().byRecipeType(ref.recipeType());
+        Optional<MachineSpec> specOpt = KitRegistry.instance().byRecipeType(ref.recipeType());
         if (specOpt.isEmpty()) {
             helper.fail("no MachineSpec registered for " + ref.recipeType());
             return;

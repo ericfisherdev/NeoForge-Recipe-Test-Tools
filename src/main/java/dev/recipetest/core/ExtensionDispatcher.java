@@ -35,7 +35,7 @@ import org.slf4j.Logger;
  * RecipeTestRunner} free of {@code @SuppressWarnings} clutter.
  *
  * <p><b>Misbehaving extensions are isolated.</b> Each call wraps the extension invocation in a
- * try/catch so a runtime exception only logs and returns the fall-through default — the harness
+ * try/catch so a runtime exception only logs and returns the fall-through default — the kit
  * doesn't propagate a single bad extension's failure as the run's failure mode. Returning the
  * fall-through default means the runner's L1 path runs as if no extension were registered.
  */

@@ -43,35 +43,35 @@ import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 
 @Execution(ExecutionMode.SAME_THREAD)
-class HarnessRegistryTest {
+class KitRegistryTest {
 
     @BeforeEach
     void resetRegistry() {
-        HarnessRegistry.instance().clear();
+        KitRegistry.instance().clear();
     }
 
     @Test
     @DisplayName("instance() returns the same singleton")
     void singletonIdentity() {
-        assertSame(HarnessRegistry.instance(), HarnessRegistry.instance());
+        assertSame(KitRegistry.instance(), KitRegistry.instance());
     }
 
     @Test
     @DisplayName("register / byRecipeType round-trip")
     void registerAndLookup() {
         MachineSpec spec = makeSpec("examplemod:grinder", "examplemod:grinder");
-        HarnessRegistry.instance().register(spec);
+        KitRegistry.instance().register(spec);
 
-        Optional<MachineSpec> found = HarnessRegistry.instance().byRecipeType(spec.recipeType());
+        Optional<MachineSpec> found = KitRegistry.instance().byRecipeType(spec.recipeType());
         assertTrue(found.isPresent());
         assertSame(spec, found.get());
-        assertEquals(1, HarnessRegistry.instance().size());
+        assertEquals(1, KitRegistry.instance().size());
     }
 
     @Test
     @DisplayName("byRecipeType returns empty for unknown key")
     void byRecipeTypeMiss() {
-        assertFalse(HarnessRegistry.instance().byRecipeType(rl("nope:nope")).isPresent());
+        assertFalse(KitRegistry.instance().byRecipeType(rl("nope:nope")).isPresent());
     }
 
     @Test
@@ -79,26 +79,24 @@ class HarnessRegistryTest {
     void registerReplaces() {
         MachineSpec first = makeSpec("examplemod:grinder", "examplemod:grinder_v1");
         MachineSpec second = makeSpec("examplemod:grinder", "examplemod:grinder_v2");
-        HarnessRegistry.instance().register(first);
-        HarnessRegistry.instance().register(second);
-        assertEquals(1, HarnessRegistry.instance().size());
+        KitRegistry.instance().register(first);
+        KitRegistry.instance().register(second);
+        assertEquals(1, KitRegistry.instance().size());
         assertSame(
-                second,
-                HarnessRegistry.instance().byRecipeType(first.recipeType()).orElseThrow());
+                second, KitRegistry.instance().byRecipeType(first.recipeType()).orElseThrow());
     }
 
     @Test
     @DisplayName("register rejects null spec")
     void registerNullRejected() {
-        assertThrows(
-                NullPointerException.class, () -> HarnessRegistry.instance().register(null));
+        assertThrows(NullPointerException.class, () -> KitRegistry.instance().register(null));
     }
 
     @Test
     @DisplayName("all() returns immutable snapshot")
     void allIsImmutable() {
-        HarnessRegistry.instance().register(makeSpec("a:x", "a:x"));
-        var snapshot = HarnessRegistry.instance().all();
+        KitRegistry.instance().register(makeSpec("a:x", "a:x"));
+        var snapshot = KitRegistry.instance().all();
         assertEquals(1, snapshot.size());
         assertThrows(UnsupportedOperationException.class, () -> snapshot.clear());
     }
@@ -106,13 +104,12 @@ class HarnessRegistryTest {
     @Test
     @DisplayName("byModid() groups specs by namespace, alphabetically; paths within sorted by path")
     void byModidGrouping() {
-        HarnessRegistry.instance().register(makeSpec("zeta:c", "zeta:c"));
-        HarnessRegistry.instance().register(makeSpec("alpha:b", "alpha:b"));
-        HarnessRegistry.instance().register(makeSpec("alpha:a", "alpha:a"));
-        HarnessRegistry.instance().register(makeSpec("beta:x", "beta:x"));
+        KitRegistry.instance().register(makeSpec("zeta:c", "zeta:c"));
+        KitRegistry.instance().register(makeSpec("alpha:b", "alpha:b"));
+        KitRegistry.instance().register(makeSpec("alpha:a", "alpha:a"));
+        KitRegistry.instance().register(makeSpec("beta:x", "beta:x"));
 
-        SequencedMap<String, List<MachineSpec>> grouped =
-                HarnessRegistry.instance().byModid();
+        SequencedMap<String, List<MachineSpec>> grouped = KitRegistry.instance().byModid();
         assertNotNull(grouped);
         assertEquals(List.of("alpha", "beta", "zeta"), List.copyOf(grouped.sequencedKeySet()));
 
@@ -125,43 +122,42 @@ class HarnessRegistryTest {
     @Test
     @DisplayName("clear() drops all entries")
     void clearEmptiesRegistry() {
-        HarnessRegistry.instance().register(makeSpec("a:x", "a:x"));
-        assertEquals(1, HarnessRegistry.instance().size());
-        HarnessRegistry.instance().clear();
-        assertEquals(0, HarnessRegistry.instance().size());
-        assertTrue(HarnessRegistry.instance().all().isEmpty());
+        KitRegistry.instance().register(makeSpec("a:x", "a:x"));
+        assertEquals(1, KitRegistry.instance().size());
+        KitRegistry.instance().clear();
+        assertEquals(0, KitRegistry.instance().size());
+        assertTrue(KitRegistry.instance().all().isEmpty());
     }
 
     @Test
     @DisplayName("replaceAll swaps the entire snapshot in one publish")
     void replaceAllSwaps() {
-        HarnessRegistry.instance().register(makeSpec("old:one", "old:one"));
-        HarnessRegistry.instance().register(makeSpec("old:two", "old:two"));
-        assertEquals(2, HarnessRegistry.instance().size());
+        KitRegistry.instance().register(makeSpec("old:one", "old:one"));
+        KitRegistry.instance().register(makeSpec("old:two", "old:two"));
+        assertEquals(2, KitRegistry.instance().size());
 
         MachineSpec a = makeSpec("new:a", "new:a");
         MachineSpec b = makeSpec("new:b", "new:b");
-        HarnessRegistry.instance().replaceAll(java.util.Map.of(a.recipeType(), a, b.recipeType(), b));
+        KitRegistry.instance().replaceAll(java.util.Map.of(a.recipeType(), a, b.recipeType(), b));
 
-        assertEquals(2, HarnessRegistry.instance().size());
-        assertTrue(HarnessRegistry.instance().byRecipeType(rl("new:a")).isPresent());
-        assertTrue(HarnessRegistry.instance().byRecipeType(rl("new:b")).isPresent());
-        assertFalse(HarnessRegistry.instance().byRecipeType(rl("old:one")).isPresent());
+        assertEquals(2, KitRegistry.instance().size());
+        assertTrue(KitRegistry.instance().byRecipeType(rl("new:a")).isPresent());
+        assertTrue(KitRegistry.instance().byRecipeType(rl("new:b")).isPresent());
+        assertFalse(KitRegistry.instance().byRecipeType(rl("old:one")).isPresent());
     }
 
     @Test
     @DisplayName("replaceAll with empty map empties the registry")
     void replaceAllEmpty() {
-        HarnessRegistry.instance().register(makeSpec("a:x", "a:x"));
-        HarnessRegistry.instance().replaceAll(java.util.Map.of());
-        assertEquals(0, HarnessRegistry.instance().size());
+        KitRegistry.instance().register(makeSpec("a:x", "a:x"));
+        KitRegistry.instance().replaceAll(java.util.Map.of());
+        assertEquals(0, KitRegistry.instance().size());
     }
 
     @Test
     @DisplayName("replaceAll rejects null map")
     void replaceAllNullRejected() {
-        assertThrows(
-                NullPointerException.class, () -> HarnessRegistry.instance().replaceAll(null));
+        assertThrows(NullPointerException.class, () -> KitRegistry.instance().replaceAll(null));
     }
 
     @Test
@@ -169,42 +165,39 @@ class HarnessRegistryTest {
     void replaceAllKeyMismatchRejected() {
         // Seed with a known entry so we can assert the throw path doesn't publish.
         MachineSpec seed = makeSpec("seed:keep", "seed:keep");
-        HarnessRegistry.instance().register(seed);
-        assertEquals(1, HarnessRegistry.instance().size());
+        KitRegistry.instance().register(seed);
+        assertEquals(1, KitRegistry.instance().size());
 
         MachineSpec spec = makeSpec("real:type", "real:type");
         ResourceLocation wrongKey = rl("wrong:key");
         java.util.Map<ResourceLocation, MachineSpec> bad = java.util.Map.of(wrongKey, spec);
         IllegalArgumentException ex = assertThrows(
-                IllegalArgumentException.class, () -> HarnessRegistry.instance().replaceAll(bad));
+                IllegalArgumentException.class, () -> KitRegistry.instance().replaceAll(bad));
         assertTrue(ex.getMessage().contains("wrong:key"));
         assertTrue(ex.getMessage().contains("real:type"));
 
         // Atomicity: seed must still be present, the throwing replaceAll never published.
-        assertEquals(1, HarnessRegistry.instance().size());
-        assertSame(
-                seed, HarnessRegistry.instance().byRecipeType(seed.recipeType()).orElseThrow());
-        assertFalse(HarnessRegistry.instance().byRecipeType(rl("wrong:key")).isPresent());
-        assertFalse(HarnessRegistry.instance().byRecipeType(rl("real:type")).isPresent());
+        assertEquals(1, KitRegistry.instance().size());
+        assertSame(seed, KitRegistry.instance().byRecipeType(seed.recipeType()).orElseThrow());
+        assertFalse(KitRegistry.instance().byRecipeType(rl("wrong:key")).isPresent());
+        assertFalse(KitRegistry.instance().byRecipeType(rl("real:type")).isPresent());
     }
 
     @Test
     @DisplayName("replaceAll rejects null spec value and leaves prior snapshot intact")
     void replaceAllNullValueRejected() {
         MachineSpec seed = makeSpec("seed:keep", "seed:keep");
-        HarnessRegistry.instance().register(seed);
-        assertEquals(1, HarnessRegistry.instance().size());
+        KitRegistry.instance().register(seed);
+        assertEquals(1, KitRegistry.instance().size());
 
         java.util.Map<ResourceLocation, MachineSpec> bad = new java.util.HashMap<>();
         bad.put(rl("a:x"), null);
-        assertThrows(
-                NullPointerException.class, () -> HarnessRegistry.instance().replaceAll(bad));
+        assertThrows(NullPointerException.class, () -> KitRegistry.instance().replaceAll(bad));
 
         // Atomicity: seed must still be present, the throwing replaceAll never published.
-        assertEquals(1, HarnessRegistry.instance().size());
-        assertSame(
-                seed, HarnessRegistry.instance().byRecipeType(seed.recipeType()).orElseThrow());
-        assertFalse(HarnessRegistry.instance().byRecipeType(rl("a:x")).isPresent());
+        assertEquals(1, KitRegistry.instance().size());
+        assertSame(seed, KitRegistry.instance().byRecipeType(seed.recipeType()).orElseThrow());
+        assertFalse(KitRegistry.instance().byRecipeType(rl("a:x")).isPresent());
     }
 
     @Test
@@ -223,7 +216,7 @@ class HarnessRegistryTest {
                         start.await();
                         for (int i = 0; i < perThread; i++) {
                             String id = "mod_" + threadIndex + ":spec_" + i;
-                            HarnessRegistry.instance().register(makeSpec(id, id));
+                            KitRegistry.instance().register(makeSpec(id, id));
                         }
                     } catch (InterruptedException ignored) {
                         Thread.currentThread().interrupt();
@@ -241,7 +234,7 @@ class HarnessRegistryTest {
         // Without the CAS loop, racing read-modify-write on a volatile field would lose updates
         // and the size would be < threads*perThread. With the AtomicReference.getAndUpdate path
         // every register() retries until it observes its own write; the final size must be exact.
-        assertEquals(threads * perThread, HarnessRegistry.instance().size());
+        assertEquals(threads * perThread, KitRegistry.instance().size());
     }
 
     private static MachineSpec makeSpec(String recipeType, String block) {

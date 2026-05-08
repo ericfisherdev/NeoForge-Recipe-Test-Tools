@@ -24,7 +24,7 @@ import dev.recipetest.api.BulkProgress;
 import dev.recipetest.api.BulkResult;
 import dev.recipetest.api.MachineSpec;
 import dev.recipetest.api.TestContext;
-import dev.recipetest.core.HarnessRegistry;
+import dev.recipetest.core.KitRegistry;
 import dev.recipetest.core.ProgressReporter;
 import dev.recipetest.core.RecipeAdapter;
 import dev.recipetest.core.RecipeAdapters;
@@ -70,7 +70,7 @@ final class BulkSubcommand {
     static int runOne(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ResourceLocation recipeType =
                 parseId(com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "recipeType"));
-        MachineSpec spec = HarnessRegistry.instance().byRecipeType(recipeType).orElseThrow(SPEC_NOT_REGISTERED::create);
+        MachineSpec spec = KitRegistry.instance().byRecipeType(recipeType).orElseThrow(SPEC_NOT_REGISTERED::create);
         ServerLevel level = ctx.getSource().getLevel();
         List<TickScheduler.Job> jobs = collectJobs(level, List.of(spec));
         if (jobs.isEmpty()) {
@@ -83,7 +83,7 @@ final class BulkSubcommand {
     /** {@code /recipe_test bulk all} — every recipe across every registered spec. */
     static int runAll(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerLevel level = ctx.getSource().getLevel();
-        Collection<MachineSpec> specs = HarnessRegistry.instance().all();
+        Collection<MachineSpec> specs = KitRegistry.instance().all();
         if (specs.isEmpty()) {
             ctx.getSource().sendFailure(Component.literal("no specs registered"));
             return 0;
@@ -142,7 +142,7 @@ final class BulkSubcommand {
      * provide adapters for non-vanilla recipe types.
      *
      * <p>Output is sorted by {@code (spec.recipeType, holder.id)} so the deterministic shuffle
-     * has a stable starting point — neither {@code HarnessRegistry.all()} nor
+     * has a stable starting point — neither {@code KitRegistry.all()} nor
      * {@code recipeManager.getRecipes()} guarantees iteration order, so without this normalisation
      * the same runId could produce different shuffled orders on different startups.
      */

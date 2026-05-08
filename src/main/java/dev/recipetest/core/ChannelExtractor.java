@@ -26,7 +26,7 @@ import java.util.Objects;
  * sample-loop driver uses it to bucket each completed run into the right channel before handing
  * the histogram to {@link DistributionValidator}.
  *
- * <p>Strategy is deliberately simple — the harness's L1 path covers single-output recipes well,
+ * <p>Strategy is deliberately simple — the kit's L1 path covers single-output recipes well,
  * and the L2 SPI's {@code weights()} contract keys channels by string regardless of source. We
  * pick the first-most-specific identifier the {@link IoSnapshot} carries:
  *

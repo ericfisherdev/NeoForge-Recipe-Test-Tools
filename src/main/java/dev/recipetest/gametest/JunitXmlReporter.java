@@ -50,7 +50,7 @@ import org.slf4j.Logger;
  * console. {@link #finish()} then writes the assembled XML.
  *
  * <p><b>How it gets recipe-level detail.</b> {@link DynamicGameTestGenerator} captures the
- * harness's {@link TestResult} for each test and posts it to {@link #recordResult}. The reporter
+ * kit's {@link TestResult} for each test and posts it to {@link #recordResult}. The reporter
  * looks up the matching result by {@link GameTestInfo#getTestName()} when serialising, so failures
  * carry the diff JSON and passes carry diagnostics in {@code <system-out>}.
  *
@@ -77,7 +77,7 @@ public final class JunitXmlReporter implements TestReporter {
     private static @Nullable JunitXmlReporter installedInstance;
 
     /** Side channel keyed by GameTest name; populated by {@link DynamicGameTestGenerator} after
-     *  the harness publishes a {@link TestResult}. {@link ConcurrentHashMap} because the GameTest
+     *  the kit publishes a {@link TestResult}. {@link ConcurrentHashMap} because the GameTest
      *  framework drives tests on the server thread but JVM-level shutdown might race with the
      *  finish call. */
     private static final Map<String, TestResult> RESULTS = new ConcurrentHashMap<>();
@@ -112,7 +112,7 @@ public final class JunitXmlReporter implements TestReporter {
 
     /** Posts the live {@link TestResult} for {@code testName}. {@link DynamicGameTestGenerator}
      *  calls this before throwing on fail (or after asserting success) so XML rows can carry the
-     *  full harness payload. */
+     *  full kit payload. */
     public static void recordResult(String testName, TestResult result) {
         RESULTS.put(testName, result);
     }
@@ -247,7 +247,7 @@ public final class JunitXmlReporter implements TestReporter {
     }
 
     private static String renderSystemOut(Row row) {
-        Optional<TestResult> opt = row.harnessResult();
+        Optional<TestResult> opt = row.kitResult();
         if (opt.isEmpty()) {
             return "";
         }
@@ -343,13 +343,13 @@ public final class JunitXmlReporter implements TestReporter {
             double runtimeSeconds,
             boolean isFailure,
             String failureMessage,
-            Optional<TestResult> harnessResult) {
-        static Row success(String name, double runtimeSeconds, Optional<TestResult> harnessResult) {
-            return new Row(name, runtimeSeconds, false, "", harnessResult);
+            Optional<TestResult> kitResult) {
+        static Row success(String name, double runtimeSeconds, Optional<TestResult> kitResult) {
+            return new Row(name, runtimeSeconds, false, "", kitResult);
         }
 
-        static Row failure(String name, double runtimeSeconds, String message, Optional<TestResult> harnessResult) {
-            return new Row(name, runtimeSeconds, true, message, harnessResult);
+        static Row failure(String name, double runtimeSeconds, String message, Optional<TestResult> kitResult) {
+            return new Row(name, runtimeSeconds, true, message, kitResult);
         }
     }
 

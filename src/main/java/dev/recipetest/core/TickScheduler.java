@@ -44,7 +44,7 @@ import org.slf4j.Logger;
 /**
  * Cooperative bulk runner. Owns a queue of pending {@link Job}s and at most one in-flight
  * {@link RecipeTestRunner}; advances the runner one server tick at a time inside an MSPT budget
- * pulled from {@link HarnessConfig#BULK_MSPT_BUDGET_MS}.
+ * pulled from {@link KitConfig#BULK_MSPT_BUDGET_MS}.
  *
  * <p>Single in-flight job is the Phase 3 simplification — every spec shares the same structure
  * region, so two runners cannot place blocks simultaneously without conflicts. Phase 4 may
@@ -210,10 +210,10 @@ public final class TickScheduler {
         // comparisons. wallClockMs (the user-facing total run duration in BulkResult) stays on
         // currentTimeMillis where the absolute time-of-day reading is what matters.
         long tickStartNanos = System.nanoTime();
-        long budgetMs = HarnessConfig.BULK_MSPT_BUDGET_MS.get();
+        long budgetMs = KitConfig.BULK_MSPT_BUDGET_MS.get();
 
         // Drain on cancel: emit any in-flight CANCELLED result, then finalise. The cancel-tick
-        // is real work the harness did; track it in totalEngineTicks / peakMspt so the final
+        // is real work the kit did; track it in totalEngineTicks / peakMspt so the final
         // BulkResult reflects the actual cost of the cancellation pass and an MSPT spike on
         // the cancellation tick still surfaces in the WARN log.
         if (run.cancelRequested) {
@@ -301,8 +301,8 @@ public final class TickScheduler {
     }
 
     private void maybeEmitProgress(ActiveRun run) {
-        int everyN = HarnessConfig.PROGRESS_REPORT_EVERY_N.get();
-        int everyTicks = HarnessConfig.PROGRESS_REPORT_EVERY_TICKS.get();
+        int everyN = KitConfig.PROGRESS_REPORT_EVERY_N.get();
+        int everyTicks = KitConfig.PROGRESS_REPORT_EVERY_TICKS.get();
         boolean emit = run.completedSinceLastProgress >= everyN || run.ticksSinceLastProgress >= everyTicks;
         if (!emit) {
             return;

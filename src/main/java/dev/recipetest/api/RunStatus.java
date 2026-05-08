@@ -24,7 +24,7 @@ package dev.recipetest.api;
  *   <li>{@link #PASS} — actual output matched expected within {@link ValidationPolicy} tolerances.
  *   <li>{@link #FAIL} — actual output diverged from expected; {@code TestResult.diff} populated.
  *   <li>{@link #TIMEOUT} — tick budget exhausted before output appeared.
- *   <li>{@link #ERROR} — placement, capability resolution, or injection failed; harness-level
+ *   <li>{@link #ERROR} — placement, capability resolution, or injection failed; kit-level
  *       problem rather than a recipe disagreement.
  *   <li>{@link #SKIPPED} — runner deliberately did not execute (e.g. no recipe matched, optional
  *       mod absent, distribution mode pending sample collection).

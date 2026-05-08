@@ -27,7 +27,7 @@ import java.util.Objects;
  * @param fluidConsumed fluids drained during the run, ordered by tank index
  * @param energyConsumed FE difference between {@code energy.preFill} and post-run reading; zero
  *     when {@link EnergySpec#trackConsumption()} is false or no energy spec is declared
- * @param warnings non-fatal harness warnings (e.g. injection leftovers, unrecognised side)
+ * @param warnings non-fatal kit warnings (e.g. injection leftovers, unrecognised side)
  * @param logs free-form runner messages, chronologically ordered
  */
 public record Diagnostics(

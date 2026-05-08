@@ -21,8 +21,8 @@ import com.mojang.logging.LogUtils;
 import dev.recipetest.command.RecipeTestCommand;
 import dev.recipetest.compat.forestry.ForestryCarpenterAdapter;
 import dev.recipetest.core.ExtensionRegistry;
-import dev.recipetest.core.HarnessConfig;
-import dev.recipetest.core.HarnessRegistry;
+import dev.recipetest.core.KitConfig;
+import dev.recipetest.core.KitRegistry;
 import dev.recipetest.core.RecipeAdapters;
 import dev.recipetest.core.RunSessionScheduler;
 import dev.recipetest.core.TickScheduler;
@@ -52,7 +52,7 @@ public final class RecipeTestMod {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     public RecipeTestMod(IEventBus modEventBus, ModContainer modContainer) {
-        modContainer.registerConfig(ModConfig.Type.SERVER, HarnessConfig.SPEC);
+        modContainer.registerConfig(ModConfig.Type.SERVER, KitConfig.SPEC);
         modEventBus.addListener(this::onCommonSetup);
         modEventBus.addListener(this::onRegisterGameTests);
         NeoForge.EVENT_BUS.addListener(this::onAddReloadListeners);
@@ -90,7 +90,7 @@ public final class RecipeTestMod {
     private void onAddReloadListeners(AddReloadListenerEvent event) {
         var registries = event.getRegistryAccess();
         event.addListener(new SpecLoader(
-                HarnessRegistry.instance(),
+                KitRegistry.instance(),
                 rl -> registries
                         .registry(Registries.RECIPE_TYPE)
                         .map(reg -> reg.containsKey(rl))

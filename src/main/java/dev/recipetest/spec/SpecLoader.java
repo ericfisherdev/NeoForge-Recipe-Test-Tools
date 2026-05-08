@@ -22,7 +22,7 @@ import com.google.gson.JsonElement;
 import com.mojang.serialization.JsonOps;
 import dev.recipetest.RecipeTestMod;
 import dev.recipetest.api.MachineSpec;
-import dev.recipetest.core.HarnessRegistry;
+import dev.recipetest.core.KitRegistry;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -45,7 +45,7 @@ import org.slf4j.Logger;
  *       with a JSON pointer to the offending field.
  *   <li>Validate via {@link SpecValidator#validate}; rules from {@code json-spec.md} produce
  *       {@link ValidationIssue}s.
- *   <li>If no ERROR-severity issues, insert into {@link HarnessRegistry}. WARN-severity issues
+ *   <li>If no ERROR-severity issues, insert into {@link KitRegistry}. WARN-severity issues
  *       are logged but don't block registration.
  *   <li>Errors and warnings are logged with the file's resource id so spec authors can locate
  *       the problem.
@@ -61,16 +61,14 @@ public final class SpecLoader extends SimpleJsonResourceReloadListener {
      */
     public static final String FOLDER = "recipe_test/machines";
 
-    private final HarnessRegistry registry;
+    private final KitRegistry registry;
     private final Predicate<ResourceLocation> recipeTypeKnown;
     private final Predicate<ResourceLocation> blockKnown;
     private final Predicate<ResourceLocation> customKindKnown;
     private final Predicate<ResourceLocation> recipeTypeHasExtension;
 
     public SpecLoader(
-            HarnessRegistry registry,
-            Predicate<ResourceLocation> recipeTypeKnown,
-            Predicate<ResourceLocation> blockKnown) {
+            KitRegistry registry, Predicate<ResourceLocation> recipeTypeKnown, Predicate<ResourceLocation> blockKnown) {
         // Backwards-compatible: defaults both extension predicates to "everything resolves" so
         // existing tests that don't know about Phase 5 extensions still pass. Production callers
         // should prefer the five-arg constructor.
@@ -78,7 +76,7 @@ public final class SpecLoader extends SimpleJsonResourceReloadListener {
     }
 
     public SpecLoader(
-            HarnessRegistry registry,
+            KitRegistry registry,
             Predicate<ResourceLocation> recipeTypeKnown,
             Predicate<ResourceLocation> blockKnown,
             Predicate<ResourceLocation> customKindKnown) {
@@ -87,7 +85,7 @@ public final class SpecLoader extends SimpleJsonResourceReloadListener {
     }
 
     public SpecLoader(
-            HarnessRegistry registry,
+            KitRegistry registry,
             Predicate<ResourceLocation> recipeTypeKnown,
             Predicate<ResourceLocation> blockKnown,
             Predicate<ResourceLocation> customKindKnown,

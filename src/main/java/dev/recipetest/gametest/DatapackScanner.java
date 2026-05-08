@@ -47,11 +47,11 @@ import org.slf4j.Logger;
  *   <li>The set of {@code recipeType} values declared by spec files at
  *       {@code data/<modid>/recipe_test/machines/<name>.json}.
  *   <li>The set of {@code (recipeType, recipeId)} pairs whose {@code "type"} field matches one of
- *       those spec types — i.e. the recipes that have a registered harness spec.
+ *       those spec types — i.e. the recipes that have a registered kit spec.
  * </ol>
  *
  * <p><b>Why this lives here, not in {@code SpecLoader}.</b> {@code RegisterGameTestsEvent} fires
- * before any datapack is read by the server's {@code ResourceManager}, so {@code HarnessRegistry}
+ * before any datapack is read by the server's {@code ResourceManager}, so {@code KitRegistry}
  * is empty when the dynamic GameTest generator needs to enumerate recipes. The scanner walks the
  * mod jars directly via NIO so it works at registration time without touching the server's
  * registries.
@@ -66,7 +66,7 @@ public final class DatapackScanner {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    /** Subdirectory under each {@code data/<ns>/} that holds harness spec JSON files. */
+    /** Subdirectory under each {@code data/<ns>/} that holds kit spec JSON files. */
     private static final String SPECS_SUBDIR = "recipe_test/machines";
 
     /**
@@ -78,7 +78,7 @@ public final class DatapackScanner {
 
     private DatapackScanner() {}
 
-    /** Reference to a recipe whose type has a registered harness spec. */
+    /** Reference to a recipe whose type has a registered kit spec. */
     public record RecipeRef(ResourceLocation recipeType, ResourceLocation recipeId) {
         public RecipeRef {
             Objects.requireNonNull(recipeType, "recipeType");

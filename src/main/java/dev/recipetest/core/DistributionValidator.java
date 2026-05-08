@@ -32,7 +32,7 @@ import java.util.TreeSet;
  * captured in the result so a failing run can show exactly which channel diverged and by how
  * much.
  *
- * <p><b>Pure.</b> No runner, scheduler, or world dependency. The harness's distribution-mode
+ * <p><b>Pure.</b> No runner, scheduler, or world dependency. The kit's distribution-mode
  * runner (added in Phase 5 PR-C) collects observations across N runs and hands them to this
  * class for the verdict; tests pass synthetic histograms directly.
  *
@@ -118,7 +118,7 @@ public final class DistributionValidator {
 
     /**
      * Verdict + per-channel detail. Use {@link #toDiffMap()} to render the breakdown into a
-     * shape compatible with the harness's existing diff infrastructure.
+     * shape compatible with the kit's existing diff infrastructure.
      */
     public record Result(boolean pass, int totalSamples, double tolerance, List<ChannelDelta> channels) {
 
@@ -140,7 +140,7 @@ public final class DistributionValidator {
         }
 
         /** Channel-keyed map of {@code observed - expected} deltas. Useful for embedding into
-         *  the harness's diff JSON without inventing new types. */
+         *  the kit's diff JSON without inventing new types. */
         public Map<String, Double> toDiffMap() {
             Map<String, Double> map = new LinkedHashMap<>();
             for (ChannelDelta c : channels) {

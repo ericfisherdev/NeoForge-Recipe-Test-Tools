@@ -38,7 +38,7 @@ import org.slf4j.Logger;
  * {@link ChannelExtractor}, and on completion of the final sample hands the assembled histogram
  * to {@link DistributionValidator#verdict} for the PASS/FAIL decision.
  *
- * <p><b>Why a session.</b> The harness's existing {@link RecipeTestRunner} drives one recipe
+ * <p><b>Why a session.</b> The kit's existing {@link RecipeTestRunner} drives one recipe
  * one time. Distribution-mode wants the same recipe driven {@code N} times with the same
  * placement, then one combined verdict. Wrapping that orchestration in its own class keeps the
  * runner state machine simple and lets tests exercise the sample-loop logic without booting a

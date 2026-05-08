@@ -24,7 +24,7 @@ import java.util.Optional;
  * Maps recipe item ingredients (or results, when used in {@link OutputBinding}) onto a machine's
  * item-handler slots.
  *
- * @param capability the capability identifier the harness will query (e.g. {@code "ItemHandler"})
+ * @param capability the capability identifier the kit will query (e.g. {@code "ItemHandler"})
  * @param side which side of the block to query (defaults to {@link Side#INTERNAL})
  * @param slots explicit slot indices the binding covers
  * @param layout how recipe ingredients map onto {@code slots} (input bindings only)
