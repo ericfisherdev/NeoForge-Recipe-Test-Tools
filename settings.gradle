@@ -11,3 +11,9 @@ plugins {
 }
 
 rootProject.name = 'recipe_test'
+
+// Reference extensions that consume the harness as an external consumer would. The harness
+// module never depends on these — see each subproject's build.gradle for the one-way
+// `:` → `examples:*` dependency direction. They live here so `./gradlew check` exercises
+// them alongside the harness, and so review can spot accidental harness → examples coupling.
+include ':examples:mekanism-gas-stub'
