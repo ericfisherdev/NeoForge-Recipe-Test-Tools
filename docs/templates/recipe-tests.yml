@@ -1,4 +1,4 @@
-# Sample GitHub Actions workflow for consumer mods using the recipe_test harness.
+# Sample GitHub Actions workflow for consumer mods using the recipe_test kit.
 # Drop this file in your consumer mod's `.github/workflows/recipe-tests.yml`.
 #
 # What it does:

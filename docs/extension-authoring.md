@@ -1,6 +1,6 @@
 # Extension Authoring Guide
 
-The recipe_test harness covers about 80% of NeoForge machine recipes through JSON specs alone
+The recipe_test kit covers about 80% of NeoForge machine recipes through JSON specs alone
 (the L1 path). The other 20% — recipes with probabilistic outputs, custom `RecipeInput` shapes,
 gas/heat/mana storage, multi-block coordination — register a small `RecipeTestExtension` to
 fill in what JSON can't express. This guide walks through writing one from scratch.
@@ -10,15 +10,15 @@ fill in what JSON can't express. This guide walks through writing one from scrat
 Try the JSON-only path first. Reach for an extension only when:
 
 - The recipe has **probabilistic outputs** (centrifuges, crushers, ore processing). The
-  harness can't infer the per-channel weights from `Recipe.getResults()` — most modded
-  probabilistic recipes embed the weights in the recipe class itself, so the harness needs
+  kit can't infer the per-channel weights from `Recipe.getResults()` — most modded
+  probabilistic recipes embed the weights in the recipe class itself, so the kit needs
   your code to reach in and pull them out.
 - The recipe consumes inputs from a **non-standard storage type**: gas tanks, heat reservoirs,
   mana pools, anything outside `IItemHandler` / `IFluidHandler` / `IEnergyStorage`.
 - The recipe's **`RecipeInput` shape** isn't a list of stacks — recipes that take a single
   composite ingredient, recipes that read from a multi-block grid.
 - The recipe's **processing time is on the recipe object**, not on your spec, and you want
-  the harness to honour it without making every consumer hand-author tickBudget per recipe.
+  the kit to honour it without making every consumer hand-author tickBudget per recipe.
 
 If your recipe fits the standard "items in, items/fluids/energy out" shape, the JSON spec is
 enough — you don't need this guide.
@@ -29,11 +29,11 @@ An extension consists of:
 
 1. A **Java class** implementing `dev.recipetest.api.RecipeTestExtension<R>`, where `R` is your concrete `Recipe` subtype.
 2. A **services file** at `src/main/resources/META-INF/services/dev.recipetest.api.RecipeTestExtension` listing the fully-qualified class name.
-3. A **`mods.toml` dependency** on `recipe_test` so your jar declares the harness as a
+3. A **`mods.toml` dependency** on `recipe_test` so your jar declares the kit as a
    runtime requirement.
 
 That's it. There's no annotation processor, no registration event, no DI container. The
-harness's `ExtensionRegistry` walks `ServiceLoader` at common-setup time and indexes whatever
+kit's `ExtensionRegistry` walks `ServiceLoader` at common-setup time and indexes whatever
 it finds.
 
 ## The SPI surface
@@ -70,7 +70,7 @@ public interface RecipeTestExtension<R extends Recipe<?>> {
 }
 ```
 
-Every method has a default. You override only the hooks you need, and the harness keeps doing
+Every method has a default. You override only the hooks you need, and the kit keeps doing
 its L1 thing for the rest.
 
 ## Hook reference
@@ -78,8 +78,8 @@ its L1 thing for the rest.
 | Hook                      | When to override                                                                                                                  | What returning the default means                                                  |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | `recipeType()`            | Always (this is how the registry indexes you).                                                                                    | N/A — required.                                                                   |
-| `injectInputs()`          | Your recipe takes inputs the L1 path can't express (gas, custom RecipeInput).                                                     | `FALL_THROUGH` → harness's L1 inject runs.                                        |
-| `validateOutput()`        | You want full control of the actual-vs-expected diff. Distribution-mode runs handle their own validation, so most don't need this.| `Optional.empty()` → harness's L1 differ runs.                                    |
+| `injectInputs()`          | Your recipe takes inputs the L1 path can't express (gas, custom RecipeInput).                                                     | `FALL_THROUGH` → kit's L1 inject runs.                                            |
+| `validateOutput()`        | You want full control of the actual-vs-expected diff. Distribution-mode runs handle their own validation, so most don't need this.| `Optional.empty()` → kit's L1 differ runs.                                        |
 | `tickBudgetOverride()`    | The recipe carries `processingTime` as a field instead of as a spec field.                                                        | `-1` → spec's `tickBudget` is used.                                               |
 | `resolveCustomBinding()`  | You need to inject/read from non-item/fluid/energy storage. Pair with `supportedKinds()`.                                         | `Optional.empty()` → spec validation rejects the binding's `kind`.                |
 | `supportedKinds()`        | You declare which `CustomBinding.kind` values your `resolveCustomBinding()` can handle. Used by spec validator at server start.   | Empty set → spec referencing your kind fails validation.                          |
@@ -89,11 +89,11 @@ its L1 thing for the rest.
 
 Imagine a hypothetical mod's `MyCentrifugeRecipe` that returns a list of
 `WeightedOutput(ItemStack stack, float weight)` from `getProducts()`. The recipe is
-probabilistic — each run produces one of N possible items. The harness's L1 path can't
+probabilistic — each run produces one of N possible items. The kit's L1 path can't
 validate this because it doesn't know the weights.
 
 ```java
-package com.example.mymod.harness;
+package com.example.mymod.recipetests;
 
 import com.example.mymod.MyCentrifugeRecipe;
 import dev.recipetest.api.RecipeTestExtension;
@@ -132,7 +132,7 @@ public final class MyCentrifugeExtension implements RecipeTestExtension<MyCentri
 Services file at `src/main/resources/META-INF/services/dev.recipetest.api.RecipeTestExtension`:
 
 ```text
-com.example.mymod.harness.MyCentrifugeExtension
+com.example.mymod.recipetests.MyCentrifugeExtension
 ```
 
 The matching JSON spec at `src/main/resources/data/mymod/recipe_test/machines/centrifuge.json`:
@@ -165,7 +165,7 @@ The matching JSON spec at `src/main/resources/data/mymod/recipe_test/machines/ce
 }
 ```
 
-When `runGameTestServer` boots, the harness:
+When `runGameTestServer` boots, the kit:
 
 1. Discovers `MyCentrifugeExtension` via `ServiceLoader` at common-setup.
 2. Validates the spec at datapack-load: `validation.mode = "distribution"` requires a
@@ -222,7 +222,7 @@ public InjectionDecision injectInputs(TestContext ctx, RecipeHolder<MyGasRecipe>
 }
 ```
 
-Returning `HANDLED` from `injectInputs` tells the harness to skip its L1 inject path. If you
+Returning `HANDLED` from `injectInputs` tells the kit to skip its L1 inject path. If you
 also want L1 to run on top (e.g. to inject items the regular way while you handle the gas
 separately), return `FALL_THROUGH` instead.
 
@@ -234,12 +234,12 @@ separately), return `FALL_THROUGH` instead.
 | `distribution mode requires a registered RecipeTestExtension`               | Your extension's `recipeType()` doesn't match the spec's. They must be string-equal `ResourceLocation`s.                         |
 | Distribution test fails with all channels at 100% delta                    | Your `weights()` is empty. Override it. The validator walks the union of observed and expected channels.                         |
 | Tests pass locally, fail in CI with a different histogram                  | Recipe RNG isn't deterministic. Either seed it from the spec or accept a wider `distributionTolerance`.                          |
-| `NullPointerException` thrown from one of your hooks aborts the run        | The harness wraps each hook call in try/catch and falls back to L1 — but the test still likely fails. Check logs for the warn.   |
+| `NullPointerException` thrown from one of your hooks aborts the run        | The kit wraps each hook call in try/catch and falls back to L1 — but the test still likely fails. Check logs for the warn.       |
 | You changed your extension class name and CI still uses the old one        | The services file is text — update both the class name in code and the entry in `META-INF/services/...`.                         |
 
 ## Testing your extension
 
-The harness ships unit-test seams for the parts you'll exercise locally:
+The kit ships unit-test seams for the parts you'll exercise locally:
 
 - `ExtensionRegistry.replaceForTesting(List<RecipeTestExtension<?>>)` — install your
   extension into the registry without going through ServiceLoader.
@@ -260,6 +260,6 @@ Open an issue at <https://github.com/ericfisherdev/NeoForge-Recipe-Test-Tools/is
 - The full `recipe-test.xml` `<system-out>` block
 - What you expected vs. what happened
 
-Extension-authoring questions are first-class — the harness only earns its keep if writing
+Extension-authoring questions are first-class — the kit only earns its keep if writing
 one against an unrelated mod takes <30 minutes. If yours took longer, the docs have a gap and
 we want to fix it.

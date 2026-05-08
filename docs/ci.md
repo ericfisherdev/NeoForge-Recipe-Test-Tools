@@ -1,6 +1,6 @@
 # CI Integration
 
-The recipe_test harness runs every recipe-spec pair as a dynamic GameTest. Pointing
+The recipe_test kit runs every recipe-spec pair as a dynamic GameTest. Pointing
 GitHub Actions at `runGameTestServer` is enough to get one CI test per loaded recipe
 without writing any Java.
 
@@ -10,7 +10,7 @@ without writing any Java.
    mod at `.github/workflows/recipe-tests.yml`.
 2. Confirm your `build.gradle`'s `runs.gameTestServer` block already exists (the
    NeoGradle template includes it).
-3. Push. The workflow runs `./gradlew runGameTestServer`, the harness walks loaded mod
+3. Push. The workflow runs `./gradlew runGameTestServer`, the kit walks loaded mod
    jars to find every spec/recipe pair, and the JUnit XML reporter writes
    `build/gametest/results/recipe-test.xml`.
 
@@ -19,7 +19,7 @@ without writing any Java.
 `build/gametest/results/recipe-test.xml` is a JUnit-format file with one
 `<testcase>` per dynamic recipe test. Test names follow the format
 `recipe_test.<typeNs>.<typePath>.<idNs>.<idPath>` — the same scheme Gradle's
-`--tests` flag accepts. Failures carry the harness `TestResult` JSON in
+`--tests` flag accepts. Failures carry the kit's `TestResult` JSON in
 `<system-out>` so reviewers can see the diff inline:
 
 ```xml
@@ -92,7 +92,7 @@ RECIPE_TEST_FILTER='recipe_test\.forestry\.carpenter\.' \
 
 Each generated TestFunction is given `maxTicks = 260` by default
 (`DEFAULT_AUTO_BUDGET=200` plus a `60`-tick buffer). Recipes whose actual budget
-exceeds 200 ticks will TIMEOUT inside the GameTest framework even when the harness
+exceeds 200 ticks will TIMEOUT inside the GameTest framework even when the kit
 runner would have eventually passed them. If your CI keeps surfacing TIMEOUT for
 long-running recipes:
 
@@ -123,7 +123,7 @@ runs {
 - **World datapacks.** The scanner walks loaded mod jars, not server-owner packs in
   `world/datapacks/`. Tests that depend on a datapack-only override won't appear.
 - **Probabilistic outputs.** Phase 5 adds the L2 SPI for recipes whose outputs vary
-  per run. Until then, the harness compares against the recipe's declared output
+  per run. Until then, the kit compares against the recipe's declared output
   exactly.
 - **Multi-machine pipelines.** Out of scope for v1; tracked in the project roadmap.
 
