@@ -52,9 +52,12 @@ jobs:
           REF="${REF#refs/tags/}"
           # Fast-fail on a malformed tag rather than silently publishing an artifact at a
           # garbage version. The on.push.tags filter ('v*') only enforces a leading "v";
-          # this regex enforces semver-shape (vMAJOR.MINOR.PATCH with optional pre-release
-          # suffix), which is what consumers of dev.recipetest:recipe_test will resolve.
-          if [[ ! "${REF}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+          # this regex enforces SemVer 2.0.0 shape — vMAJOR.MINOR.PATCH with an optional
+          # hyphen-prefixed pre-release identifier (dot-separated alphanumerics).
+          # Hyphen-only is intentional: the prerelease detection further down only inspects
+          # for "-", so allowing dot-suffixed shapes like "v1.2.3.rc1" would silently publish
+          # a malformed tag as prerelease=false.
+          if [[ ! "${REF}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
             echo "::error::Invalid tag '${REF}'. Expected semver-shape: v1.2.3 or v1.2.3-rc.1 (workflow_dispatch input or tag push)."
             exit 1
           fi
