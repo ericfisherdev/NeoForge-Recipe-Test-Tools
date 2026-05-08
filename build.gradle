@@ -262,7 +262,7 @@ publishing {
     }
     repositories {
         // Local file-backed repo for development; release workflow adds GitHub Packages
-        // (and optionally Modrinth Maven) at publish time via env-driven configuration.
+        // at publish time via env-driven configuration.
         maven {
             name = 'localRepo'
             url  = "file://${project.projectDir}/repo"
