@@ -24,10 +24,10 @@ Targets Minecraft 1.21.1 / NeoForge 21.1.213 / Java 21 throughout.
 
 ## [1.0.0] — TBD
 
-First public release. Five engineering phases (Bootstrap → Skeleton → Single Recipe → Bulk
-+ Tick Budgeting → GameTest Auto-Generation → L2 Extension SPI) closed and merged. The
-harness is feature-complete and mod-agnostic; real-world examples live in external consumer
-mods rather than this repo.
+First public release. Five engineering phases (Bootstrap → Skeleton → Single Recipe →
+Bulk-and-Tick-Budgeting → GameTest Auto-Generation → L2 Extension SPI) closed and merged.
+The harness is feature-complete and mod-agnostic; real-world examples live in external
+consumer mods rather than this repo.
 
 ### Highlights
 
@@ -95,7 +95,7 @@ mods rather than this repo.
 - `/recipe_test run <recipeType> <recipeId>` queues a recipe against the spec'd machine
   block; `/recipe_test diff <runId>` returns the result. Async, ServerTickEvent-driven.
 - `RecipeAdapter` SPI for recipe-input extraction; built-in adapters for vanilla shaped
-  + shapeless recipes.
+  and shapeless recipes.
 - `RecipeTestRunner` drives placement → injection → tick advancement → output read →
   diff. Cleans up the placed block on completion.
 - `ResultDiffer` produces `DiffPayload` with per-channel mismatches; supports
