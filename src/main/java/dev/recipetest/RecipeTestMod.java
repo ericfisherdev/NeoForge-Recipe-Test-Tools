@@ -96,7 +96,8 @@ public final class RecipeTestMod {
                         .map(reg -> reg.containsKey(rl))
                         .orElse(false),
                 BuiltInRegistries.BLOCK::containsKey,
-                ExtensionRegistry.instance().kindKnownPredicate()));
+                ExtensionRegistry.instance().kindKnownPredicate(),
+                ExtensionRegistry.instance().recipeTypeHasExtensionPredicate()));
     }
 
     private void onRegisterCommands(RegisterCommandsEvent event) {

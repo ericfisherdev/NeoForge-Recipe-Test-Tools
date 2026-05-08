@@ -51,6 +51,11 @@ import net.minecraft.resources.ResourceLocation;
  *   <li>{@code inputs.custom[i].kind} or {@code outputs.custom[i].kind} that no registered
  *       {@code RecipeTestExtension} claims via {@code supportedKinds()} →
  *       {@link ValidationIssue.Severity#ERROR} (Phase 5 AC#4)
+ *   <li>{@code validation.mode = "distribution"} for a {@code recipeType} with no registered
+ *       {@code RecipeTestExtension} → {@link ValidationIssue.Severity#ERROR}. Distribution
+ *       mode needs the extension's {@code weights()} to define the expected per-channel
+ *       distribution; without it, every channel would FAIL against an empty expected map
+ *       (Phase 5 AC#5)
  * </ol>
  *
  * <p>Capability-presence checking is deferred to Phase 2 (needs a temp world placement).
@@ -76,14 +81,15 @@ public final class SpecValidator {
      */
     public static List<ValidationIssue> validate(
             MachineSpec spec, Predicate<ResourceLocation> recipeTypeKnown, Predicate<ResourceLocation> blockKnown) {
-        // Default the kind predicate to "everything resolves" so existing call sites that don't
-        // know about extensions don't start emitting spurious errors. Production wires this from
-        // ExtensionRegistry.kindKnownPredicate(); tests pass their own.
-        return validate(spec, recipeTypeKnown, blockKnown, kind -> true);
+        // Default both extension predicates to "everything resolves" so existing call sites that
+        // don't know about extensions don't start emitting spurious errors. Production wires
+        // these from ExtensionRegistry; tests pass their own.
+        return validate(spec, recipeTypeKnown, blockKnown, kind -> true, recipeType -> true);
     }
 
     /**
-     * Validate a spec with extension-aware kind resolution.
+     * Validate a spec with extension-aware kind resolution. Back-compat overload — distribution
+     * extension predicate defaults to "always present".
      *
      * @param customKindKnown predicate answering "does some registered {@code
      *     RecipeTestExtension} claim this {@link CustomBinding#kind}?". Wire to
@@ -94,10 +100,30 @@ public final class SpecValidator {
             Predicate<ResourceLocation> recipeTypeKnown,
             Predicate<ResourceLocation> blockKnown,
             Predicate<ResourceLocation> customKindKnown) {
+        return validate(spec, recipeTypeKnown, blockKnown, customKindKnown, recipeType -> true);
+    }
+
+    /**
+     * Validate a spec with full extension awareness — both custom-binding kind resolution
+     * (rule 7) and distribution-mode extension presence (rule 8).
+     *
+     * @param customKindKnown predicate answering "does some registered {@code
+     *     RecipeTestExtension} claim this {@link CustomBinding#kind}?". Wire to
+     *     {@code ExtensionRegistry.instance().kindKnownPredicate()}.
+     * @param recipeTypeHasExtension predicate answering "is a {@code RecipeTestExtension}
+     *     registered for this recipeType?". Used by rule 8 — distribution mode requires one.
+     */
+    public static List<ValidationIssue> validate(
+            MachineSpec spec,
+            Predicate<ResourceLocation> recipeTypeKnown,
+            Predicate<ResourceLocation> blockKnown,
+            Predicate<ResourceLocation> customKindKnown,
+            Predicate<ResourceLocation> recipeTypeHasExtension) {
         Objects.requireNonNull(spec, "spec");
         Objects.requireNonNull(recipeTypeKnown, "recipeTypeKnown");
         Objects.requireNonNull(blockKnown, "blockKnown");
         Objects.requireNonNull(customKindKnown, "customKindKnown");
+        Objects.requireNonNull(recipeTypeHasExtension, "recipeTypeHasExtension");
         List<ValidationIssue> issues = new ArrayList<>();
         validateVersion(spec, issues);
         validateRecipeType(spec, recipeTypeKnown, issues);
@@ -106,6 +132,7 @@ public final class SpecValidator {
         validateDistributionSamples(spec.validation(), issues);
         spec.outputs().items().ifPresent(items -> validatePrimaryInSlots(items, issues));
         validateCustomBindingKinds(spec, customKindKnown, issues);
+        validateDistributionExtensionPresent(spec, recipeTypeHasExtension, issues);
         return List.copyOf(issues);
     }
 
@@ -179,6 +206,21 @@ public final class SpecValidator {
                         "unresolved custom binding kind '" + cb.kind() + "'",
                         "register a RecipeTestExtension whose supportedKinds() contains '" + cb.kind() + "'"));
             }
+        }
+    }
+
+    private static void validateDistributionExtensionPresent(
+            MachineSpec spec, Predicate<ResourceLocation> recipeTypeHasExtension, List<ValidationIssue> out) {
+        if (spec.validation().mode() != ValidationPolicy.Mode.DISTRIBUTION) {
+            return;
+        }
+        if (!recipeTypeHasExtension.test(spec.recipeType())) {
+            out.add(ValidationIssue.error(
+                    "/validation/mode",
+                    "distribution mode requires a registered RecipeTestExtension for recipeType '" + spec.recipeType()
+                            + "' to supply per-channel weights",
+                    "register a RecipeTestExtension for '" + spec.recipeType()
+                            + "' that overrides weights(), or change validation.mode to 'exact' / 'subset'"));
         }
     }
 
