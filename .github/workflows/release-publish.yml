@@ -18,12 +18,12 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
-  packages: write
+  contents: write    # needed to create the GitHub Release
+  packages: write    # needed to publish to GitHub Packages
 
 jobs:
   publish:
-    name: Publish to GitHub Packages
+    name: Publish artifact + draft release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -42,14 +42,22 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Resolve version from tag
+      - name: Resolve version + prerelease flag from tag
         id: version
         run: |
           REF="${{ inputs.tag || github.ref_name }}"
           # Strip leading "v" if present (v1.0.0 → 1.0.0).
           VERSION="${REF#v}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Resolved version: ${VERSION}"
+          echo "tag=${REF}"          >> "$GITHUB_OUTPUT"
+          # Mark anything with a hyphenated suffix (-rc.1, -beta.2, -alpha.3, -snapshot)
+          # as a prerelease so consumers don't get it via "latest".
+          if [[ "${VERSION}" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Resolved version: ${VERSION} (prerelease=$([[ "${VERSION}" == *-* ]] && echo true || echo false))"
 
       - name: Build
         run: ./gradlew clean build check -Pmod_version=${{ steps.version.outputs.version }} --no-daemon --stacktrace
@@ -63,3 +71,17 @@ jobs:
             -Pmod_version=${{ steps.version.outputs.version }} \
             -PgithubPackagesUrl='https://maven.pkg.github.com/${{ github.repository }}' \
             --no-daemon --stacktrace
+
+      - name: Create GitHub draft release with jars attached
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name:     ${{ steps.version.outputs.tag }}
+          draft:      true
+          prerelease: ${{ steps.version.outputs.prerelease }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            build/libs/recipe_test-${{ steps.version.outputs.version }}.jar
+            build/libs/recipe_test-${{ steps.version.outputs.version }}-sources.jar
+            build/libs/recipe_test-${{ steps.version.outputs.version }}-javadoc.jar
