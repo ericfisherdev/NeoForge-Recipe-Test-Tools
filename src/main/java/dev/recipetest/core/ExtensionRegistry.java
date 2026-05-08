@@ -151,6 +151,13 @@ public final class ExtensionRegistry {
         return this::isKindSupported;
     }
 
+    /** Predicate answering "is a {@link RecipeTestExtension} registered for this recipeType?".
+     *  Wired into the spec validator's distribution-mode rule (rule 8) — distribution-mode
+     *  specs require an extension to supply per-channel weights. */
+    public java.util.function.Predicate<ResourceLocation> recipeTypeHasExtensionPredicate() {
+        return rt -> forRecipeType(rt).isPresent();
+    }
+
     /** Snapshot of all registered extensions in registration order. Order is the
      *  ServiceLoader iteration order, which is unspecified — callers should not depend on it. */
     public Collection<RecipeTestExtension<?>> all() {

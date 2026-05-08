@@ -29,7 +29,10 @@ Consumer mods integrating the harness should start with
 [`docs/consumer-quickstart.md`](docs/consumer-quickstart.md); the matching CI
 workflow template lives at
 [`docs/templates/recipe-tests.yml`](docs/templates/recipe-tests.yml). Tuning options
-and troubleshooting are in [`docs/ci.md`](docs/ci.md).
+and troubleshooting are in [`docs/ci.md`](docs/ci.md). When JSON specs aren't
+enough — probabilistic outputs, gas/heat tanks, custom `RecipeInput` shapes — the
+L2 escape hatch is documented at
+[`docs/extension-authoring.md`](docs/extension-authoring.md).
 
 ## Repo layout
 

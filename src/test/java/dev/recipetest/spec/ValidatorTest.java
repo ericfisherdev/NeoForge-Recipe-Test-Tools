@@ -224,6 +224,49 @@ class ValidatorTest {
         assertNoIssueAt(issues, "/inputs/custom/0/kind");
     }
 
+    @Test
+    @DisplayName("Rule 8 FAIL: distribution mode without registered extension emits ERROR at /validation/mode")
+    void distributionWithoutExtensionFails() {
+        MachineSpec spec = withValidation(baseSpec(), distributionPolicy(100));
+        // Five-arg overload: kindKnown=true (no custom bindings used) but recipeTypeHasExtension=false
+        List<ValidationIssue> issues =
+                SpecValidator.validate(spec, ALL_KNOWN, BLOCK_KNOWN, kind -> true, recipeType -> false);
+        ValidationIssue issue = findAt(issues, "/validation/mode");
+        assertEquals(ValidationIssue.Severity.ERROR, issue.severity());
+        assertTrue(issue.message().contains("distribution"));
+        assertTrue(issue.message().contains(spec.recipeType().toString()));
+        assertTrue(issue.fixHint().contains("weights()"), "fix hint should reference the weights() override");
+    }
+
+    @Test
+    @DisplayName("Rule 8 PASS: distribution mode with registered extension does not emit /validation/mode")
+    void distributionWithExtensionPasses() {
+        MachineSpec spec = withValidation(baseSpec(), distributionPolicy(100));
+        List<ValidationIssue> issues =
+                SpecValidator.validate(spec, ALL_KNOWN, BLOCK_KNOWN, kind -> true, recipeType -> true);
+        assertNoIssueAt(issues, "/validation/mode");
+    }
+
+    @Test
+    @DisplayName("Rule 8 PASS: non-distribution modes don't require an extension")
+    void nonDistributionModeIgnoresExtensionPredicate() {
+        // baseSpec uses ValidationPolicy.DEFAULT which is EXACT mode; predicate=false should
+        // not produce a /validation/mode error since rule 8 only applies to DISTRIBUTION.
+        MachineSpec spec = baseSpec();
+        List<ValidationIssue> issues =
+                SpecValidator.validate(spec, ALL_KNOWN, BLOCK_KNOWN, kind -> true, recipeType -> false);
+        assertNoIssueAt(issues, "/validation/mode");
+    }
+
+    @Test
+    @DisplayName("Rule 8 default: four-arg overload defaults to extension-present (back-compat)")
+    void distributionRulePredicateDefaultsBackCompat() {
+        MachineSpec spec = withValidation(baseSpec(), distributionPolicy(100));
+        // Four-arg overload — no recipeTypeHasExtension predicate provided
+        List<ValidationIssue> issues = SpecValidator.validate(spec, ALL_KNOWN, BLOCK_KNOWN, kind -> true);
+        assertNoIssueAt(issues, "/validation/mode");
+    }
+
     private static MachineSpec withInputCustom(MachineSpec s, List<CustomBinding> custom) {
         InputBinding ib = new InputBinding(s.inputs().items(), s.inputs().fluids(), custom);
         return new MachineSpec(
