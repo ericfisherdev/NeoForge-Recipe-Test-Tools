@@ -46,6 +46,10 @@ jobs:
         id: version
         run: |
           REF="${{ inputs.tag || github.ref_name }}"
+          # Defensive: when triggered via workflow_dispatch a careless user could paste the
+          # full ref (e.g. "refs/tags/v1.0.0") instead of just the tag name. github.ref_name
+          # is already short on tag push, so this is a no-op there.
+          REF="${REF#refs/tags/}"
           # Strip leading "v" if present (v1.0.0 → 1.0.0).
           VERSION="${REF#v}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
