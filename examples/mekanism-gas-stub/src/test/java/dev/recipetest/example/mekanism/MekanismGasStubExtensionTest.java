@@ -103,6 +103,10 @@ class MekanismGasStubExtensionTest {
         CustomHandler.InjectResult result = handler.inject(tooMuch);
         var refused = assertInstanceOf(CustomHandler.InjectResult.Refused.class, result);
         assertTrue(refused.reason().contains("capacity"));
+        // Atomicity: a refused inject must not leave the tank with the partial fill GasTank.fill
+        // would otherwise have written. Pin the contract so a regression to fill-then-check
+        // ordering shows up here instead of silently corrupting downstream reads.
+        assertEquals(GasStack.EMPTY, tank.snapshot(), "refused injections must not mutate tank state");
     }
 
     @Test

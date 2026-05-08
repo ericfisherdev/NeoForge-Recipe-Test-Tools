@@ -52,11 +52,20 @@ public final class GasTankHandler implements CustomHandler {
             return InjectResult.refused("payload must be a GasStack, got "
                     + (payload == null ? "null" : payload.getClass().getName()));
         }
-        int accepted = tank.fill(stack);
-        if (accepted < stack.amount()) {
+        // Pre-check capacity before mutating the tank. CustomHandler's contract is that a
+        // refused injection leaves storage unmodified — calling tank.fill() first and then
+        // returning Refused on a partial accept would silently violate that, leaving the
+        // next read with junk. A different gas type triggers a tank replacement at fill time,
+        // so the available space for the incoming stack is the full capacity in that case.
+        GasStack current = tank.snapshot();
+        int maxAcceptable = (!current.isEmpty() && !current.gas().equals(stack.gas()))
+                ? tank.capacity()
+                : tank.capacity() - current.amount();
+        if (stack.amount() > maxAcceptable) {
             return InjectResult.refused(
-                    "tank capacity exceeded: requested " + stack.amount() + ", accepted " + accepted);
+                    "tank capacity exceeded: requested " + stack.amount() + ", accepted " + maxAcceptable);
         }
+        tank.fill(stack);
         return InjectResult.accepted();
     }
 
