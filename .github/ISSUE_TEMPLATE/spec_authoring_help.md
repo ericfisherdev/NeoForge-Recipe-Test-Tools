@@ -56,7 +56,7 @@ troubleshooting guide doesn't cover.
 
 ## Environment
 
-- Recipe-test harness version:
+- Recipe-test kit version:
 - Minecraft version: 1.21.1
 - NeoForge version:
 - Java version: 21

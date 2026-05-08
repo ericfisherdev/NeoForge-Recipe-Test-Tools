@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/ericfisherdev/NeoForge-Recipe-Test-Tools/blob/main/schemas/machine_spec.schema.json",
   "title": "MachineSpec",
-  "description": "Datapack-driven recipe-test harness machine specification. One file per machine RecipeType under data/<modid>/recipe_test/machines/<name>.json.",
+  "description": "Datapack-driven recipe-test kit machine specification. One file per machine RecipeType under data/<modid>/recipe_test/machines/<name>.json.",
   "type": "object",
   "required": ["version", "recipeType", "block", "inputs", "outputs", "tickBudget"],
   "additionalProperties": false,

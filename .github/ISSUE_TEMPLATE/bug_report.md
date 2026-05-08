@@ -30,7 +30,7 @@ to write a spec for X".
 
 ## Environment
 
-- Recipe-test harness version: <!-- e.g. 1.0.0 -->
+- Recipe-test kit version: <!-- e.g. 1.0.0 -->
 - Minecraft version: 1.21.1
 - NeoForge version:
 - Java version: 21

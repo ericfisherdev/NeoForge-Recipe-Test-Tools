@@ -1,6 +1,6 @@
-# NeoForge Recipe Test Harness
+# NeoForge Recipe Test Kit
 
-Datapack-driven recipe testing harness for NeoForge mods. Drop one JSON spec
+Datapack-driven recipe testing kit for NeoForge mods. Drop one JSON spec
 per machine into your mod, ship a CI workflow, and every recipe becomes an
 auto-generated GameTest that runs against a real `runGameTestServer`.
 

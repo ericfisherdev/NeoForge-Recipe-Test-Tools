@@ -228,7 +228,7 @@ publishing {
             from components.java
 
             pom {
-                name        = 'NeoForge Recipe Test Harness'
+                name        = 'NeoForge Recipe Test Kit'
                 description = mod_description
                 url         = 'https://github.com/ericfisherdev/NeoForge-Recipe-Test-Tools'
 
