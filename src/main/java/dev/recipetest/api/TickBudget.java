@@ -18,7 +18,7 @@
 package dev.recipetest.api;
 
 /**
- * How long the harness will let a recipe tick before declaring it stalled.
+ * How long the kit will let a recipe tick before declaring it stalled.
  *
  * <ul>
  *   <li>{@link Auto} — use {@code recipe.getProcessingTime()} if present, else 200 ticks.

@@ -22,7 +22,7 @@ import java.util.Objects;
 /**
  * Abstraction over non-item, non-fluid, non-energy storage on a machine block entity. Returned
  * by {@link RecipeTestExtension#resolveCustomBinding} for each {@link CustomBinding} declared on
- * a spec. The harness uses it to inject test inputs and read actual outputs without knowing
+ * a spec. The kit uses it to inject test inputs and read actual outputs without knowing
  * anything about the underlying capability shape (gas, heat, mana, etc.).
  *
  * <p>{@code CustomHandler} is intentionally small. Inputs are encoded as opaque payloads —
@@ -40,7 +40,7 @@ public interface CustomHandler {
     /**
      * Inject the given payload into whatever storage this handler wraps. The payload format is
      * defined by the extension that produced the handler — it might be a serialised gas stack,
-     * a heat amount, etc. The harness passes the payload through transparently.
+     * a heat amount, etc. The kit passes the payload through transparently.
      *
      * @param payload extension-defined input value
      * @return {@link InjectResult#accepted()} on full success; {@link InjectResult#refused(String)}

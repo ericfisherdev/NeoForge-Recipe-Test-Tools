@@ -23,7 +23,7 @@ import java.util.Optional;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * Top-level immutable spec describing how the harness can drive a single machine's recipes.
+ * Top-level immutable spec describing how the kit can drive a single machine's recipes.
  * Loaded from datapack files at {@code data/<modid>/recipe_test/machines/<name>.json}.
  *
  * @param version schema version (currently must be {@code 1})

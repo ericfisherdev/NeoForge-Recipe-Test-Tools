@@ -46,7 +46,7 @@ public record InjectionResult(
         warnings = List.copyOf(warnings);
     }
 
-    /** True when the harness fully delivered the inputs the recipe asked for. */
+    /** True when the kit fully delivered the inputs the recipe asked for. */
     public boolean fullyAccepted() {
         return itemSlotsRejected.isEmpty() && fluidLeftover == 0;
     }

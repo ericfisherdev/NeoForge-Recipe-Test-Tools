@@ -48,15 +48,15 @@ import net.minecraft.resources.ResourceLocation;
  * derived structures like {@link #byModid()} see a consistent view even if a writer publishes
  * mid-iteration.
  */
-public final class HarnessRegistry {
+public final class KitRegistry {
 
-    private static final HarnessRegistry INSTANCE = new HarnessRegistry();
+    private static final KitRegistry INSTANCE = new KitRegistry();
 
     private final AtomicReference<Map<ResourceLocation, MachineSpec>> specs = new AtomicReference<>(Map.of());
 
-    private HarnessRegistry() {}
+    private KitRegistry() {}
 
-    public static HarnessRegistry instance() {
+    public static KitRegistry instance() {
         return INSTANCE;
     }
 
@@ -72,10 +72,10 @@ public final class HarnessRegistry {
         for (Map.Entry<ResourceLocation, MachineSpec> entry : newSpecs.entrySet()) {
             Objects.requireNonNull(
                     entry.getValue(),
-                    () -> "null spec for recipeType " + entry.getKey() + " in HarnessRegistry.replaceAll");
+                    () -> "null spec for recipeType " + entry.getKey() + " in KitRegistry.replaceAll");
             ResourceLocation declared = entry.getValue().recipeType();
             if (!entry.getKey().equals(declared)) {
-                throw new IllegalArgumentException("HarnessRegistry.replaceAll: map key " + entry.getKey()
+                throw new IllegalArgumentException("KitRegistry.replaceAll: map key " + entry.getKey()
                         + " does not match spec.recipeType() " + declared);
             }
         }

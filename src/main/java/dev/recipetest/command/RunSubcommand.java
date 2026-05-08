@@ -24,7 +24,7 @@ import dev.recipetest.api.MachineSpec;
 import dev.recipetest.api.RunStatus;
 import dev.recipetest.api.TestContext;
 import dev.recipetest.api.TestResult;
-import dev.recipetest.core.HarnessRegistry;
+import dev.recipetest.core.KitRegistry;
 import dev.recipetest.core.RecipeAdapter;
 import dev.recipetest.core.RecipeAdapters;
 import dev.recipetest.core.RecipeTestRunner;
@@ -64,7 +64,7 @@ final class RunSubcommand {
         ResourceLocation recipeId =
                 parseId(com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "recipeId"));
 
-        MachineSpec spec = HarnessRegistry.instance().byRecipeType(recipeType).orElseThrow(SPEC_NOT_REGISTERED::create);
+        MachineSpec spec = KitRegistry.instance().byRecipeType(recipeType).orElseThrow(SPEC_NOT_REGISTERED::create);
 
         ServerLevel level = ctx.getSource().getLevel();
         RecipeManager recipeManager = level.getServer().getRecipeManager();
@@ -112,7 +112,7 @@ final class RunSubcommand {
 
     /** Helper exposed for {@link DiffSubcommand}'s shared lookup. */
     static Optional<MachineSpec> findSpec(ResourceLocation recipeType) {
-        return HarnessRegistry.instance().byRecipeType(recipeType);
+        return KitRegistry.instance().byRecipeType(recipeType);
     }
 
     /**

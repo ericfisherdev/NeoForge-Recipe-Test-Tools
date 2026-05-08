@@ -19,7 +19,7 @@ package dev.recipetest.api;
 
 /**
  * Where on a block a capability is queried from. Mirrors the six cardinal directions plus two
- * synthetic values used by the harness:
+ * synthetic values used by the kit:
  *
  * <ul>
  *   <li>{@link #ANY} — query every direction in turn until one returns a capability;

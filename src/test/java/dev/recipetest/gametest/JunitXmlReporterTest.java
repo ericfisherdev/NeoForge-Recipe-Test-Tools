@@ -75,7 +75,7 @@ class JunitXmlReporterTest {
     }
 
     @Test
-    void failureWithHarnessResultEmbedsDiffJson(@TempDir Path tmp) throws Exception {
+    void failureWithKitResultEmbedsDiffJson(@TempDir Path tmp) throws Exception {
         Path out = tmp.resolve("recipe-test.xml");
         TestResult failResult = failingResult();
         List<JunitXmlReporter.Row> rows = List.of(JunitXmlReporter.Row.failure(
@@ -87,7 +87,7 @@ class JunitXmlReporterTest {
         JunitXmlReporter.writeReport(out, rows, Instant.now(), Instant.now());
 
         String xml = Files.readString(out);
-        assertTrue(xml.contains("<system-out>"), "system-out present for failure with harness result");
+        assertTrue(xml.contains("<system-out>"), "system-out present for failure with kit result");
         assertTrue(xml.contains("status=FAIL"), "status line in system-out");
         assertTrue(xml.contains("ticksElapsed=200"), "tick count in system-out");
         assertTrue(xml.contains("resultJson="), "JSON-encoded TestResult in system-out");
@@ -142,7 +142,7 @@ class JunitXmlReporterTest {
             assertTrue(looked.isPresent(), "recordResult should put the result into the lookup map");
             assertEquals(r, looked.get());
 
-            // Missing keys yield Optional.empty — the path that produces a row without harnessResult.
+            // Missing keys yield Optional.empty — the path that produces a row without kitResult.
             assertTrue(JunitXmlReporter.recordedResultForTesting("recipe_test.absent")
                     .isEmpty());
         } finally {

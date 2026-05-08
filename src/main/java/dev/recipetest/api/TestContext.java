@@ -31,7 +31,7 @@ import net.minecraft.server.level.ServerLevel;
  * spec are placed at relative offsets from this origin.
  *
  * @param server the server hosting the test (used to dispatch lifecycle commands and tick timing)
- * @param level the world the test runs in (single-level harness for Phase 2 — overworld)
+ * @param level the world the test runs in (single-level kit for Phase 2 — overworld)
  * @param origin where the machine is placed
  * @param registries registry access for output-stack resolution (e.g. {@code Recipe.getResultItem})
  */

@@ -21,7 +21,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import dev.recipetest.api.MachineSpec;
-import dev.recipetest.core.HarnessRegistry;
+import dev.recipetest.core.KitRegistry;
 import dev.recipetest.spec.CapabilityProbe;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +49,7 @@ final class ListSubcommand {
     private ListSubcommand() {}
 
     static int listAll(CommandContext<CommandSourceStack> ctx) {
-        HarnessRegistry registry = HarnessRegistry.instance();
+        KitRegistry registry = KitRegistry.instance();
         if (registry.size() == 0) {
             ctx.getSource().sendSuccess(() -> Component.literal("No machine specs registered."), false);
             return 0;
@@ -83,7 +83,7 @@ final class ListSubcommand {
         if (rl == null) {
             throw BAD_RESOURCE_LOCATION.create();
         }
-        Optional<MachineSpec> spec = HarnessRegistry.instance().byRecipeType(rl);
+        Optional<MachineSpec> spec = KitRegistry.instance().byRecipeType(rl);
         if (spec.isEmpty()) {
             throw NOT_REGISTERED.create();
         }

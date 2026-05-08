@@ -20,7 +20,7 @@ package dev.recipetest.core;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
- * Server-side mod config controlling the harness's runtime knobs. Registered against
+ * Server-side mod config controlling the kit's runtime knobs. Registered against
  * {@code ModConfig.Type.SERVER} from {@code RecipeTestMod} so each world has its own values.
  *
  * <p>All entries are read directly from the {@link ModConfigSpec.IntValue} accessors at
@@ -28,7 +28,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  * after world load, so reads are cheap; that lets the user tweak values via {@code
  * world/serverconfig/recipe_test-server.toml} without restarting.
  */
-public final class HarnessConfig {
+public final class KitConfig {
 
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
@@ -51,11 +51,11 @@ public final class HarnessConfig {
 
     /** Floor applied to {@code TickBudget.AUTO} resolutions. */
     public static final ModConfigSpec.IntValue DEFAULT_TICK_BUDGET_FLOOR = BUILDER.comment(
-                    "Minimum tick budget the harness will assume when a spec uses tickBudget=\"auto\".",
+                    "Minimum tick budget the kit will assume when a spec uses tickBudget=\"auto\".",
                     "Recipe-specific processingTime, when known, takes precedence.")
             .defineInRange("defaultTickBudgetFloor", 200, 1, 100_000);
 
     public static final ModConfigSpec SPEC = BUILDER.build();
 
-    private HarnessConfig() {}
+    private KitConfig() {}
 }

@@ -25,7 +25,7 @@ import net.minecraft.world.item.crafting.Recipe;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 /**
- * Pluggable extraction layer between a {@link Recipe} object and the runner. The harness needs to
+ * Pluggable extraction layer between a {@link Recipe} object and the runner. The kit needs to
  * know what ingredients to inject, where they sit in a shaped pattern, what fluid the recipe
  * consumes, and what to expect as output — none of which are surfaced uniformly by {@code Recipe}.
  *
