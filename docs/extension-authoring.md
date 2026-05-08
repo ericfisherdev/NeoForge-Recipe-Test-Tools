@@ -1,9 +1,10 @@
 # Extension Authoring Guide
 
-The recipe_test kit covers about 80% of NeoForge machine recipes through JSON specs alone
-(the L1 path). The other 20% — recipes with probabilistic outputs, custom `RecipeInput` shapes,
-gas/heat/mana storage, multi-block coordination — register a small `RecipeTestExtension` to
-fill in what JSON can't express. This guide walks through writing one from scratch.
+NeoForge Recipe Test Kit (`recipe_test`) covers about 80% of NeoForge machine recipes through
+JSON specs alone (the L1 path). The other 20% — recipes with probabilistic outputs, custom
+`RecipeInput` shapes, gas/heat/mana storage, multi-block coordination — register a small
+`RecipeTestExtension` to fill in what JSON can't express. This guide walks through writing one
+from scratch.
 
 ## When you actually need an extension
 
