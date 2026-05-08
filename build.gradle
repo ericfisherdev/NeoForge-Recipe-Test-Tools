@@ -31,6 +31,7 @@ base {
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(21)
     withSourcesJar()
+    withJavadocJar()
 }
 
 // --- NeoForge runs ---
@@ -225,11 +226,57 @@ publishing {
     publications {
         register('mavenJava', MavenPublication) {
             from components.java
+
+            pom {
+                name        = 'NeoForge Recipe Test Harness'
+                description = mod_description
+                url         = 'https://github.com/ericfisherdev/NeoForge-Recipe-Test-Tools'
+
+                licenses {
+                    license {
+                        name         = 'Apache License, Version 2.0'
+                        url          = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution = 'repo'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id   = 'ericfisherdev'
+                        name = 'Eric Fisher'
+                    }
+                }
+
+                scm {
+                    url                 = 'https://github.com/ericfisherdev/NeoForge-Recipe-Test-Tools'
+                    connection          = 'scm:git:https://github.com/ericfisherdev/NeoForge-Recipe-Test-Tools.git'
+                    developerConnection = 'scm:git:ssh://git@github.com/ericfisherdev/NeoForge-Recipe-Test-Tools.git'
+                }
+
+                issueManagement {
+                    system = 'GitHub'
+                    url    = 'https://github.com/ericfisherdev/NeoForge-Recipe-Test-Tools/issues'
+                }
+            }
         }
     }
     repositories {
+        // Local file-backed repo for development; release workflow adds GitHub Packages
+        // (and optionally Modrinth Maven) at publish time via env-driven configuration.
         maven {
-            url "file://${project.projectDir}/repo"
+            name = 'localRepo'
+            url  = "file://${project.projectDir}/repo"
+        }
+
+        if (project.hasProperty('githubPackagesUrl')) {
+            maven {
+                name = 'GitHubPackages'
+                url  = project.findProperty('githubPackagesUrl')
+                credentials {
+                    username = project.findProperty('githubPackagesUser') ?: System.getenv('GITHUB_ACTOR')
+                    password = project.findProperty('githubPackagesToken') ?: System.getenv('GITHUB_TOKEN')
+                }
+            }
         }
     }
 }
