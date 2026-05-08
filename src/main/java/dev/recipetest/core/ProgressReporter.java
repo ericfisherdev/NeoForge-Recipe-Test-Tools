@@ -23,8 +23,10 @@ import com.mojang.serialization.JsonOps;
 import dev.recipetest.api.BulkProgress;
 import dev.recipetest.api.BulkResult;
 import dev.recipetest.api.RunStatus;
+import dev.recipetest.api.TestResult;
 import dev.recipetest.spec.BulkResultCodec;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
@@ -87,7 +89,45 @@ public final class ProgressReporter {
         lines.add("  wallClock: " + result.wallClockMs() + " ms");
         lines.add("  engineTicks: " + result.totalEngineTicks());
         lines.add("  peakMspt: " + result.peakMsptBudgetUsedMs() + " ms");
+        appendNonPassRecipes(lines, result.results());
         return List.copyOf(lines);
+    }
+
+    /**
+     * Non-PASS recipe ids per status, grouped, capped at {@link #FAILURE_LIST_CAP_PER_STATUS}
+     * entries per status with an overflow indicator.
+     */
+    static final int FAILURE_LIST_CAP_PER_STATUS = 25;
+
+    private static void appendNonPassRecipes(List<String> lines, List<TestResult> results) {
+        Map<RunStatus, List<TestResult>> byStatus = new EnumMap<>(RunStatus.class);
+        for (TestResult r : results) {
+            if (r.status() == RunStatus.PASS) {
+                continue;
+            }
+            byStatus.computeIfAbsent(r.status(), s -> new ArrayList<>()).add(r);
+        }
+        if (byStatus.isEmpty()) {
+            return;
+        }
+        // Iterate RunStatus.values() so the section order is stable across runs (FAIL, TIMEOUT,
+        // ERROR, CANCELLED) instead of being dictated by the order recipes finished in.
+        for (RunStatus status : RunStatus.values()) {
+            List<TestResult> entries = byStatus.get(status);
+            if (entries == null || entries.isEmpty()) {
+                continue;
+            }
+            String label = status.name().toLowerCase(java.util.Locale.ROOT);
+            lines.add("  " + label + " (" + entries.size() + "):");
+            int shown = Math.min(entries.size(), FAILURE_LIST_CAP_PER_STATUS);
+            for (int i = 0; i < shown; i++) {
+                lines.add("    " + entries.get(i).recipeId());
+            }
+            int overflow = entries.size() - shown;
+            if (overflow > 0) {
+                lines.add("    … and " + overflow + " more (use /recipe_test diff <runId> for the full list)");
+            }
+        }
     }
 
     private static void appendCounts(StringBuilder sb, Map<RunStatus, Integer> counts) {
