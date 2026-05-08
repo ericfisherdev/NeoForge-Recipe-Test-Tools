@@ -143,6 +143,18 @@ Issues welcome at
 [github.com/ericfisherdev/NeoForge-Recipe-Test-Tools/issues](https://github.com/ericfisherdev/NeoForge-Recipe-Test-Tools/issues);
 templates exist for bug reports, spec-authoring help, and feature requests.
 
+If you're sending PRs, run the one-time hooks setup after cloning so local
+checks match CI exactly:
+
+```sh
+./scripts/setup-hooks.sh
+```
+
+This wires `.githooks/pre-commit` (markdownlint on staged `.md` files) and
+`.githooks/pre-push` (`./gradlew check` + full markdownlint + optional
+`gitleaks`). Both match the `markdownlint-cli2` version pinned by the CI
+workflow (currently `v0.14.0`).
+
 ## License
 
 Licensed under the [Apache License, Version 2.0](LICENSE).

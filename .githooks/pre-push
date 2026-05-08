@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# pre-push: full CI parity locally before code leaves the machine.
+# Mirrors the GitHub Actions CI workflow (.github/workflows/ci.yml):
+#   1. Build & Test     — `./gradlew build check`
+#   2. Markdown lint    — markdownlint-cli2 v0.14.0 over the same globs
+#   3. Secret scan      — gitleaks (skipped with WARNING if not installed locally)
+#
+# Runs once per `git push` regardless of how many commits. ~1-2 min cold, ~30s
+# warm (gradle daemon). Bypass with --no-verify only as an explicit choice — CI
+# will block the PR otherwise.
+
+set -euo pipefail
+
+# Keep the version pinned in lock-step with .github/workflows/ci.yml's markdown-lint job.
+# CI pins via DavidAnson/markdownlint-cli2-action@v17 → markdownlint-cli2 v0.14.0.
+MARKDOWNLINT_CLI2_VERSION="0.14.0"
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+failures=0
+
+run_step() {
+  local name="$1"; shift
+  echo
+  echo "[pre-push] === ${name} ==="
+  if "$@"; then
+    echo "[pre-push] ${name}: OK"
+  else
+    echo "[pre-push] ${name}: FAIL"
+    failures=$((failures + 1))
+  fi
+}
+
+# 1. Gradle build + check (matches CI Build & Test job).
+gradle_check() {
+  ./gradlew build check --no-daemon=false --console=plain
+}
+
+# 2. Markdown lint (matches CI markdown-lint job verbatim).
+markdown_lint() {
+  if ! command -v npx >/dev/null 2>&1; then
+    echo "[pre-push] npx not found on PATH; install Node.js to enable this check."
+    return 1
+  fi
+  npx --yes "markdownlint-cli2@${MARKDOWNLINT_CLI2_VERSION}" \
+    '**/*.md' \
+    '!**/.bare/**' \
+    '!**/build/**' \
+    '!**/.gradle/**' \
+    '!**/run/**' \
+    '!**/runs/**'
+}
+
+# 3. Secret scan (matches CI secret-scan job — best-effort locally).
+secret_scan() {
+  if ! command -v gitleaks >/dev/null 2>&1; then
+    echo "[pre-push] WARNING: gitleaks not installed locally — skipping. CI will still run it."
+    echo "           Install via: https://github.com/gitleaks/gitleaks/releases"
+    return 0
+  fi
+  gitleaks detect --source="${REPO_ROOT}" --no-banner --redact
+}
+
+run_step "Gradle build + check"    gradle_check
+run_step "Markdown lint (parity v${MARKDOWNLINT_CLI2_VERSION})" markdown_lint
+run_step "Secret scan (gitleaks)"  secret_scan
+
+echo
+if [ "${failures}" -gt 0 ]; then
+  echo "[pre-push] ${failures} step(s) FAILED. Fix the issues above before pushing, or pass --no-verify to bypass (CI will catch it)."
+  exit 1
+fi
+
+echo "[pre-push] All CI-parity checks passed."
