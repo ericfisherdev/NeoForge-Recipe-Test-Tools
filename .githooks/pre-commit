@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# pre-commit: fast checks on staged content only.
+# Mirrors the CI markdownlint job (DavidAnson/markdownlint-cli2-action@v17).
+# Runs in <5s when no markdown is staged; <10s when markdown is staged (npm fetch).
+#
+# Bypass with --no-verify only if you know what you're doing — CI will block the PR otherwise.
+
+set -euo pipefail
+
+# CI pins via DavidAnson/markdownlint-cli2-action@v17 → markdownlint-cli2 v0.14.0.
+# Keep this in lock-step with .github/workflows/ci.yml's markdown-lint job.
+MARKDOWNLINT_CLI2_VERSION="0.14.0"
+
+# Resolve repo root (works inside worktrees and submodules).
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+# Collect staged Markdown files (Added / Copied / Modified — skip Deleted).
+mapfile -t STAGED_MD < <(git diff --cached --name-only --diff-filter=ACM -- '*.md' || true)
+
+if [ "${#STAGED_MD[@]}" -eq 0 ]; then
+  exit 0
+fi
+
+# Strip any paths the CI workflow excludes so local + CI behave identically.
+FILTERED_MD=()
+for f in "${STAGED_MD[@]}"; do
+  case "$f" in
+    .bare/*|*/.bare/*) continue ;;
+    build/*|*/build/*) continue ;;
+    .gradle/*|*/.gradle/*) continue ;;
+    run/*|*/run/*) continue ;;
+    runs/*|*/runs/*) continue ;;
+  esac
+  FILTERED_MD+=("$f")
+done
+
+if [ "${#FILTERED_MD[@]}" -eq 0 ]; then
+  exit 0
+fi
+
+if ! command -v npx >/dev/null 2>&1; then
+  echo "[pre-commit] WARNING: npx not found on PATH; cannot run markdownlint-cli2. Install Node.js or skip with --no-verify."
+  exit 1
+fi
+
+echo "[pre-commit] markdownlint-cli2@${MARKDOWNLINT_CLI2_VERSION} on ${#FILTERED_MD[@]} staged Markdown file(s)..."
+if ! npx --yes "markdownlint-cli2@${MARKDOWNLINT_CLI2_VERSION}" "${FILTERED_MD[@]}"; then
+  echo
+  echo "[pre-commit] FAIL: markdownlint reported errors. Fix the lines above or stage the corrections."
+  echo "             Local config: .markdownlint.json"
+  exit 1
+fi
+
+echo "[pre-commit] OK"
