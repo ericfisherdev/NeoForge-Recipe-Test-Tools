@@ -151,7 +151,7 @@ checks match CI exactly:
 ```
 
 This wires `.githooks/pre-commit` (markdownlint on staged `.md` files) and
-`.githooks/pre-push` (`./gradlew check` + full markdownlint + optional
+`.githooks/pre-push` (`./gradlew build check` + full markdownlint + optional
 `gitleaks`). Both match the `markdownlint-cli2` version pinned by the CI
 workflow (currently `v0.14.0`).
 
