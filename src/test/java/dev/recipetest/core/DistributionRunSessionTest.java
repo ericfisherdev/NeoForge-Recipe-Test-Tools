@@ -118,6 +118,10 @@ class DistributionRunSessionTest {
         assertTrue(session.isFinished());
         assertEquals(3, session.completedSamples());
         assertNotNull(verdict.get());
+        // Pin verdict.totalSamples too — the prior Math.max(1, completed.get()) bug would have
+        // left session.completedSamples() correct while the verdict still claimed totalSamples=1
+        // (or any other fabricated value), so the session-level assertion alone wouldn't catch it.
+        assertEquals(3, verdict.get().totalSamples());
     }
 
     @Test
@@ -183,6 +187,78 @@ class DistributionRunSessionTest {
                         .anyMatch(c -> c.channel().equals(DistributionRunSession.INVALID_RESULT_CHANNEL)
                                 && c.observedCount() == 3),
                 "fallback channel should carry all three sample observations");
+    }
+
+    @Test
+    void asyncCallbackThatLosesCASRaceStillDrivesForward() throws Exception {
+        // Simulate a genuinely concurrent async submitter: submit() captures the callback and
+        // hands it to a separate thread that fires it after the outer submitNext()'s CAS check.
+        // The async callback's submitNext() will lose the CAS race and set needsAnotherSubmit;
+        // without the post-finally drain, the session would stall.
+        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicReference<Consumer<TestResult>> capturedCallback =
+                new java.util.concurrent.atomic.AtomicReference<>();
+        DistributionRunSession.RunnerSubmitter submitter = (spec, holder, ctx, adapter, source, callback) -> {
+            // Only the first submit is delayed; subsequent submits fire synchronously so the
+            // session can drive to completion once unstuck.
+            if (capturedCallback.get() == null) {
+                capturedCallback.set(callback);
+                // Fire the callback on a separate thread *after* the synchronous submit returns,
+                // emulating an async scheduler that loses the CAS race.
+                Thread t = new Thread(() -> {
+                    try {
+                        latch.await();
+                    } catch (InterruptedException ignored) {
+                        Thread.currentThread().interrupt();
+                    }
+                    callback.accept(buildResult(HONEY, source));
+                });
+                t.setDaemon(true);
+                t.start();
+                return;
+            }
+            callback.accept(buildResult(HONEY, source));
+        };
+
+        AtomicReference<DistributionValidator.Result> verdict = new AtomicReference<>();
+        DistributionRunSession session = DistributionRunSession.start(
+                FAKE_SPEC,
+                FAKE_HOLDER,
+                FAKE_CTX,
+                FAKE_ADAPTER,
+                "test:centrifuge.json",
+                3,
+                0.05,
+                Map.of(HONEY.toString(), 1.0),
+                submitter,
+                verdict::set);
+
+        // Outer submitNext returns: CAS released, needsAnotherSubmit=false, no result yet.
+        assertFalse(session.isFinished());
+        // Now the async callback fires — it will see submitting=false, CAS to true, run loop,
+        // and complete the remaining 2 samples synchronously.
+        latch.countDown();
+        // Give the async thread a moment to complete.
+        for (int i = 0; i < 50 && !session.isFinished(); i++) {
+            Thread.sleep(20);
+        }
+
+        assertTrue(session.isFinished(), "session must finalise after async callback drives forward");
+        assertEquals(3, session.completedSamples());
+        assertNotNull(verdict.get());
+    }
+
+    private static TestResult buildResult(ResourceLocation channel, String source) {
+        return new TestResult(
+                RECIPE,
+                TYPE,
+                source,
+                RunStatus.PASS,
+                20,
+                IoSnapshot.empty(),
+                new IoSnapshot(List.of(ItemSnapshot.of(channel, 1)), List.of()),
+                Optional.empty(),
+                new Diagnostics(List.of(), 0L, List.of(), List.of()));
     }
 
     @Test

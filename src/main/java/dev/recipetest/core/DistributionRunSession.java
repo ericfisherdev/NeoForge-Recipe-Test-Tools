@@ -222,6 +222,18 @@ public final class DistributionRunSession {
         } finally {
             submitting.set(false);
         }
+        // TOCTOU drain: a concurrent async callback may have lost the CAS race above —
+        // observed submitting=true after our `while` evaluated false, set
+        // needsAnotherSubmit, and returned without re-submitting. With the CAS released, the
+        // flag would otherwise stay true forever and the session would stall. Drain it here
+        // so the orphaned re-entry request still drives forward.
+        //
+        // Synchronous submitters always exit the do/while with needsAnotherSubmit=false (the
+        // sync callback's CAS-fail set the flag, which the loop's read-and-clear consumed) so
+        // this branch is a no-op for them.
+        if (needsAnotherSubmit.compareAndSet(true, false)) {
+            submitNext();
+        }
     }
 
     private void onSampleComplete(TestResult result) {
