@@ -33,8 +33,10 @@ run_step() {
 }
 
 # 1. Gradle build + check (matches CI Build & Test job).
+# We let the daemon stay enabled locally for ~10x faster reruns; CI uses --no-daemon
+# because it's a one-shot environment. The work performed is identical either way.
 gradle_check() {
-  ./gradlew build check --no-daemon=false --console=plain
+  ./gradlew build check --console=plain
 }
 
 # 2. Markdown lint (matches CI markdown-lint job verbatim).
