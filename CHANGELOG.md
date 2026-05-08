@@ -16,6 +16,15 @@ Targets Minecraft 1.21.1 / NeoForge 21.1.213 / Java 21 throughout.
 - Maven publish workflow keyed on tag pushes; publishes to GitHub Packages with artifact coordinates `dev.recipetest:recipe_test`.
 - POM metadata (name, description, license, SCM, issue management) on the published artifact for downstream consumer discoverability.
 - Javadoc jar published alongside the main + sources jars.
+- `core/GenericRecipeAdapter` — last-resort `RecipeAdapter` registered after the vanilla
+  shaped/shapeless adapters. Always applies; pulls items via `Recipe.getIngredients()` and
+  the primary output via `Recipe.getResultItem(HolderLookup.Provider)` — the only two
+  surfaces the `Recipe<?>` contract guarantees on every recipe regardless of mod. Most
+  modded recipes (Forestry's machine recipes, Mekanism's chemical recipes) don't override
+  `getIngredients()`, so the generic adapter returns empty inputs for them and the runner
+  relies on a registered `RecipeTestExtension` to inject ingredients via `injectInputs()`
+  returning `HANDLED` and validate the actual output via `validateOutput()`. Eliminates the
+  "no RecipeAdapter applies to this recipe" error for any recipe.
 
 ### Changed
 
@@ -29,6 +38,16 @@ Targets Minecraft 1.21.1 / NeoForge 21.1.213 / Java 21 throughout.
   references updated across the codebase. The `recipe_test` mod ID is unchanged
   (it's a registry namespace, not a display name; renaming would invalidate every
   existing spec datapack at `data/<modid>/recipe_test/machines/`).
+
+### Removed
+
+- `compat/forestry/ForestryCarpenterAdapter` — mod-specific adapter that violated the
+  kit's mod-agnostic thru-line. Per-recipe-class extraction now lives in consumer mods
+  via the `RecipeTestExtension` SPI; ForestryCE's own L2 extensions ship in ForestryCE's
+  source tree, not here.
+- Test fixture `compat/forestry/ForestryCarpenterAdapterTest` removed alongside the adapter.
+- `RecipeTestMod.onCommonSetup` no longer registers the Forestry-specific adapter; the
+  static `RecipeAdapters` block is now the only registration site.
 
 ## [1.0.0] — TBD
 

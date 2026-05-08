@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Test;
 class RecipeAdaptersTest {
 
     @Test
-    @DisplayName("Built-in vanilla adapters are registered at class init")
+    @DisplayName("Built-in adapters are registered at class init")
     void builtinsRegistered() {
         List<RecipeAdapter> snapshot = RecipeAdapters.snapshot();
         assertTrue(
@@ -39,6 +39,41 @@ class RecipeAdaptersTest {
         assertTrue(
                 snapshot.stream().anyMatch(a -> a instanceof VanillaShapelessAdapter),
                 "VanillaShapelessAdapter must be registered");
+        assertTrue(
+                snapshot.stream().anyMatch(a -> a instanceof GenericRecipeAdapter),
+                "GenericRecipeAdapter must be registered");
+    }
+
+    @Test
+    @DisplayName("GenericRecipeAdapter is registered AFTER the vanilla adapters")
+    void genericIsLastResort() {
+        List<RecipeAdapter> snapshot = RecipeAdapters.snapshot();
+        int shapedIndex = -1;
+        int shapelessIndex = -1;
+        int genericIndex = -1;
+        for (int i = 0; i < snapshot.size(); i++) {
+            RecipeAdapter adapter = snapshot.get(i);
+            if (adapter instanceof VanillaShapedAdapter) {
+                shapedIndex = i;
+            } else if (adapter instanceof VanillaShapelessAdapter) {
+                shapelessIndex = i;
+            } else if (adapter instanceof GenericRecipeAdapter) {
+                genericIndex = i;
+            }
+        }
+        // Presence checks first — without these, the ordering assertions could pass with
+        // -1 indices when an adapter is missing from the registry, masking a regression.
+        assertTrue(shapedIndex >= 0, "VanillaShapedAdapter must be present in the registry");
+        assertTrue(shapelessIndex >= 0, "VanillaShapelessAdapter must be present in the registry");
+        assertTrue(genericIndex >= 0, "GenericRecipeAdapter must be present in the registry");
+        assertTrue(genericIndex > shapedIndex, "Generic must be after VanillaShaped");
+        assertTrue(genericIndex > shapelessIndex, "Generic must be after VanillaShapeless");
+    }
+
+    @Test
+    @DisplayName("GenericRecipeAdapter defaults to SHAPELESS layout")
+    void genericDefaultLayout() {
+        assertEquals(Layout.SHAPELESS, new GenericRecipeAdapter().defaultLayout());
     }
 
     @Test

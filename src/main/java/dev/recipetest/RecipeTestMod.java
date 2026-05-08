@@ -19,11 +19,9 @@ package dev.recipetest;
 
 import com.mojang.logging.LogUtils;
 import dev.recipetest.command.RecipeTestCommand;
-import dev.recipetest.compat.forestry.ForestryCarpenterAdapter;
 import dev.recipetest.core.ExtensionRegistry;
 import dev.recipetest.core.KitConfig;
 import dev.recipetest.core.KitRegistry;
-import dev.recipetest.core.RecipeAdapters;
 import dev.recipetest.core.RunSessionScheduler;
 import dev.recipetest.core.TickScheduler;
 import dev.recipetest.gametest.DynamicGameTestGenerator;
@@ -64,14 +62,12 @@ public final class RecipeTestMod {
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
         LOGGER.info("recipe_test: bootstrap ok");
-        // Compat adapters are registered unconditionally — each adapter's static-init guards
-        // itself against the target mod being absent. ForestryCarpenterAdapter, for example,
-        // returns false from appliesTo() when ICarpenterRecipe isn't on the classpath, so
-        // having it in the registry is a no-op when Forestry isn't loaded.
-        RecipeAdapters.register(new ForestryCarpenterAdapter());
         // Discover L2 extensions via ServiceLoader. Idempotent — safe even when common-setup
         // fires more than once. Must run before SpecLoader's first apply() so unresolved-kind
-        // validation has the full extension set to consult.
+        // validation has the full extension set to consult. The harness ships only generic
+        // adapters (vanilla shaped/shapeless + a getIngredients()-based fallback registered
+        // statically in RecipeAdapters); mod-specific recipe-class extraction is the consumer
+        // mod's responsibility via RecipeTestExtension.
         ExtensionRegistry.instance().scan();
     }
 
