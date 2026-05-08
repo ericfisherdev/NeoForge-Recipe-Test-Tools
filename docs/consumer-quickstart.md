@@ -1,7 +1,7 @@
 # Consumer Quickstart
 
 Five-minute path from "I have a NeoForge mod with custom recipes" to "every recipe
-is auto-tested on every PR." Aimed at mod authors using the recipe_test harness for
+is auto-tested on every PR." Aimed at mod authors using the recipe_test kit for
 the first time.
 
 ## Prerequisites
@@ -129,11 +129,11 @@ once you've confirmed the workflow surfaces the failure on the PR.
 ## What you don't have to do
 
 - **No Java test code.** Every recipe with a matching spec gets a test for free.
-- **No structure NBTs.** The harness ships a 5×5×5 air template that every test
+- **No structure NBTs.** The kit ships a 5×5×5 air template that every test
   loads.
 - **No batch coordination.** All dynamic tests run in a single batch named
   `recipe_test_dynamic`; only one runs at a time, so there's no chance of two
-  harness runners colliding on the same chunk.
+  kit runners colliding on the same chunk.
 
 ## When recipes don't fit the JSON path
 
@@ -148,6 +148,6 @@ Open an issue at <https://github.com/ericfisherdev/NeoForge-Recipe-Test-Tools/is
 with:
 
 - The failing test name (e.g. `recipe_test.yourmod.carpenter.yourmod.broken`)
-- The contents of `<system-out>` from the JUnit XML — it includes the harness
+- The contents of `<system-out>` from the JUnit XML — it includes the kit's
   status, ticks elapsed, warnings, and (on FAIL) the `resultJson` payload
 - A link to the spec and recipe JSONs in your repo

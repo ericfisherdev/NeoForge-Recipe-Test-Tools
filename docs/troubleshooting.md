@@ -7,13 +7,13 @@ test fixtures live alongside each entry.
 
 ## 1. "Recipe never matches" — slot layout mismatch
 
-**Symptom.** `/recipe_test run` returns `TIMEOUT`, the harness logs report
+**Symptom.** `/recipe_test run` returns `TIMEOUT`, the kit logs report
 `tickBudget exceeded with no output produced`, and the machine never produces
 anything despite the inputs being placed.
 
 **Cause.** Your `inputs.items.layout` says `shaped3x3` but the recipe pattern
 isn't actually 3×3, or the slot indices in `slots` don't match the slot layout
-of the machine's `IItemHandler`. The harness inserts ingredients at the slots
+of the machine's `IItemHandler`. The kit inserts ingredients at the slots
 your spec declares; the machine's BE matches the recipe against its actual
 inventory layout. If those disagree, the BE never sees a valid input and never
 runs the recipe.
@@ -57,13 +57,13 @@ confirm the actual block ID.
 
 ## 3. "Energy never consumed"
 
-**Symptom.** Spec declares `energy.preFill: 1000000`, harness reports
+**Symptom.** Spec declares `energy.preFill: 1000000`, the kit reports
 `energyConsumed: 0` in diagnostics, and the recipe TIMEOUTs.
 
 **Cause.** Either:
 
 - `energy.capability` doesn't match the BE's actual capability. NeoForge's
-  built-in is `IEnergyStorage` (the harness alias is just `EnergyStorage` in
+  built-in is `IEnergyStorage` (the kit's alias is just `EnergyStorage` in
   spec syntax); some mods wrap it in their own capability that doesn't accept
   Forge Energy.
 - `energy.side` is `ANY` but the BE only accepts energy from a specific side.
@@ -81,7 +81,7 @@ documents (`progress.md` Phase 2 lessons learnt).
 
 ## 4. "Output mismatch — phantom NBT diff"
 
-**Symptom.** The recipe runs, the output item is correct, but the harness
+**Symptom.** The recipe runs, the output item is correct, but the kit
 reports `FAIL` with a `nbt` mismatch on the output. The diff shows a property
 like `custom_data` or `display.lore` differs even though you didn't set those
 yourself.
@@ -89,7 +89,7 @@ yourself.
 **Cause.** The recipe's "result" item carries components (NBT in the legacy
 sense) that the wrapped recipe form doesn't surface. The wrapped form returns
 the inner item without components; the outer form returns it with components.
-The harness compares against `Recipe.getResultItem()`, which by default is the
+The kit compares against `Recipe.getResultItem()`, which by default is the
 outer call — but built-in adapters for some recipe types pull from the inner
 call inadvertently.
 
@@ -99,7 +99,7 @@ call inadvertently.
   drift. This is the right answer when the components are decorative (lore,
   custom_data tags that don't affect gameplay).
 - File an issue with the recipe class name and a sample expected vs actual NBT
-  blob. Most "phantom NBT diff" cases are bugs in the harness adapter that we
+  blob. Most "phantom NBT diff" cases are bugs in the kit's adapter that we
   fix once and ship.
 
 This was the cause of the bug fixed in `e3433b6` for the ForestryCE Carpenter
@@ -113,7 +113,7 @@ channel reporting `expected weight unknown` or every channel `0.0` expected.
 
 **Cause.** Distribution mode requires a registered `RecipeTestExtension` for
 your `recipeType` that implements `weights()`. Without an extension, the
-harness has no source of per-channel weights — every observed frequency
+kit has no source of per-channel weights — every observed frequency
 compares against an empty expected map and fails.
 
 **Fix.** Either:
@@ -124,7 +124,7 @@ compares against an empty expected map and fails.
 2. Switch to `validation.mode: "exact"` if your recipe is actually
    deterministic (no probabilistic outputs).
 
-The harness now rejects this misconfiguration at spec-load time with a clear
+The kit now rejects this misconfiguration at spec-load time with a clear
 "distribution mode requires a registered extension" message — but if you saw
 the older "FAIL every channel" symptom, this is what was happening underneath.
 
@@ -170,7 +170,7 @@ returns a `CustomHandler` for it. Walk-through:
   snapshot. Check the server log for `[recipe_test] validation` ERROR entries.
 
 **Fix.** Read the validation errors at the top of the server log immediately
-after `/reload`. The harness uses an atomic swap: a failed reload leaves the
+after `/reload`. The kit uses an atomic swap: a failed reload leaves the
 previous snapshot in place rather than corrupting the registry, which is why
 you see the old version persist.
 
@@ -187,7 +187,7 @@ up.
 
 **Fix.** Either:
 
-- Increase `bulkMsptBudgetMs` in the harness config (trade TPS headroom for
+- Increase `bulkMsptBudgetMs` in the kit's config (trade TPS headroom for
   throughput).
 - Use `RECIPE_TEST_FILTER` to narrow the run to a subset.
 - Profile a single representative recipe to see if its `tickBudget` is
@@ -201,7 +201,7 @@ testcases.
 
 **Cause.** Either:
 
-- The harness wasn't on the classpath at boot (your `build.gradle` is missing
+- The kit wasn't on the classpath at boot (your `build.gradle` is missing
   the dep, or the dep is `compileOnly` instead of `implementation`).
 - No specs were discovered. The loader scans
   `data/<modid>/recipe_test/machines/`; if no datapack contributed any files
