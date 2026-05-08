@@ -22,10 +22,10 @@ catch:
 3. The recipe runs, but produces **subtly different outputs** (NBT drift, tag
    loss, item count off-by-one).
 
-The harness drives every recipe end-to-end against a live server, asserts the
-machine produced what the recipe says it should, and surfaces deltas on PRs.
-No `@GameTest` boilerplate per recipe — one spec covers every recipe of a
-given type.
+The Recipe Test Kit drives every recipe end-to-end against a live server,
+asserts the machine produced what the recipe says it should, and surfaces
+deltas on PRs. No `@GameTest` boilerplate per recipe — one spec covers every
+recipe of a given type.
 
 ## What you write
 
@@ -80,12 +80,12 @@ shapes), an L2 Java SPI is documented in
 
 ## Quick start
 
-**Consumer mods** — add the harness as a dep, write a spec, run it:
+**Consumer mods** — add the kit as a dep, write a spec, run it:
 
 → [`docs/consumer-quickstart.md`](docs/consumer-quickstart.md) — five-minute
 walkthrough from "I have a mod" to "every recipe is auto-tested on every PR."
 
-**This repo (development)** — building / testing the harness itself:
+**This repo (development)** — building / testing the kit itself:
 
 ```sh
 ./gradlew clean build check    # build + tests + spotless + checkstyle + errorprone + nullaway + jacoco
@@ -133,7 +133,7 @@ src/test/java/dev/recipetest/
 
 ## Status
 
-Harness is feature-complete through Phase 5 (L2 SPI). The
+The kit is feature-complete through Phase 5 (L2 SPI). The
 [`CHANGELOG.md`](CHANGELOG.md) tracks every release; the rolling release notes
 are draft-published by Release Drafter.
 

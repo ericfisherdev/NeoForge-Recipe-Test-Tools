@@ -1,16 +1,16 @@
 ---
 name: Bug report
-about: The harness itself is misbehaving — runtime crash, wrong test verdict, broken codec, etc.
+about: The Recipe Test Kit itself is misbehaving — runtime crash, wrong test verdict, broken codec, etc.
 title: "fix: <short description>"
 labels: ["bug"]
 assignees: []
 ---
 
 <!--
-If you're stuck writing a spec for your machine but the harness itself is
+If you're stuck writing a spec for your machine but the kit itself is
 working fine, use the "Spec authoring help" template instead.
 If you're new and not sure: this template is the right one when you'd describe
-the symptom as "the harness did something wrong" rather than "I don't know how
+the symptom as "the kit did something wrong" rather than "I don't know how
 to write a spec for X".
 -->
 
@@ -30,7 +30,7 @@ to write a spec for X".
 
 ## Environment
 
-- Recipe-test kit version: <!-- e.g. 1.0.0 -->
+- Recipe Test Kit version: <!-- e.g. 1.0.0 -->
 - Minecraft version: 1.21.1
 - NeoForge version:
 - Java version: 21
