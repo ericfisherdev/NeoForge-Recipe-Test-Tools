@@ -27,7 +27,12 @@ java {
 
 repositories {
     mavenCentral()
-    mavenLocal()
+    // Opt-in only. Local SNAPSHOT/published-locally artifacts shouldn't shadow Central
+    // resolution by default — CI must fail loudly when an unpublished dep slips into the
+    // build. Set `-PuseMavenLocal=true` to enable for local development.
+    if (findProperty('useMavenLocal') == 'true') {
+        mavenLocal()
+    }
 }
 
 dependencies {
