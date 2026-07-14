@@ -93,7 +93,7 @@ jobs:
         # (see tj-actions/changed-files in 2025) on the v2 tag would be high-blast-radius.
         # Pinning to v2.6.2 — the latest Node 20-compatible v2.x release — locks the code that
         # runs here while still letting Dependabot surface bumps within the v2.x line.
-        uses: softprops/action-gh-release@v2.6.2
+        uses: softprops/action-gh-release@v3.0.2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name:     ${{ steps.version.outputs.tag }}
